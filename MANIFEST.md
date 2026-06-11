@@ -3,7 +3,14 @@
 This manifest lists every document feeding the Monthly Financial Standing Report
 RAG pipeline, where it lives, and which Pinecone namespace it belongs to.
 
-Pinecone index: **novacart-claudecode**
+Pinecone index: **novacart-claudecode** (1024-dim, cosine, `text-embedding-3-large`)
+
+## Ingestion status
+
+✅ **All 7 sources ingested** via `scripts/ingest_pinecone.py` (run 2026-06-11):
+- `novacart-int`: 50 vectors (Product Catalog, Annual Report 2024, SKU Sales Epic KAN-196)
+- `novacart-ext`: 481 vectors (3 outlook docs + live Deloitte vjra.us page)
+- Chunking: 1500 chars, 200 overlap. Re-run the script to refresh/re-embed after source updates.
 
 ## Internal documents → namespace `novacart-int`
 
