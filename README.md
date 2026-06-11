@@ -106,3 +106,4 @@ references for each.
 ## See also
 
 - [`MANIFEST.md`](MANIFEST.md) — full knowledge source list, namespaces, and links
+- [`docs/flow.md`](docs/flow.md) — end-to-end designed flow (ingestion → retrieval → synthesis → email) with technical detail at each step
