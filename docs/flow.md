@@ -60,6 +60,27 @@ Raw sources
 | 4 | Synthesize report | `scripts/generate_monthly_report.py` → `generate_report()` | `format_context()` joins top 12 chunks per side as `[Source: title (source)]\n{text}` blocks, inserted into `REPORT_PROMPT`. Single `oai.chat.completions.create(model="gpt-4o", temperature=0.3)` call. Leading duplicate H1 stripped via regex before writing | `output/monthly_financial_standing_report_YYYY-MM.md` |
 | 5 | Draft email | `scripts/generate_monthly_report.py` → `generate_email()` | Report text inserted into `EMAIL_PROMPT`, single `gpt-4o` call (temperature 0.3) producing subject line + plain-text body | `output/email_draft_YYYY-MM.txt` |
 
+## Document ingestion paths: .docx vs. Jira Epic vs. vjra.us
+
+All 7 documents end up in the same Pinecone index via the same chunk/embed/
+upsert/idempotency logic, but they take different paths to get there:
+
+| | Plain `.docx` (5 docs) | Jira Epic (KAN-196) | vjra.us page |
+|---|---|---|---|
+| **Source** | Local files in `internal/` and `external/` | Markdown in `jira_epics/sku_weekly_sales_conversion_3y_with_revenue.md`, published as a Jira Epic | Markdown in `external_site/2026-...html`, published to GitHub Pages |
+| **Publishing step** | None — ingested directly | `scripts/publish_jira_epic.py`: ADF description (narrative) via `POST /rest/api/3/issue` (project=KAN, issuetype=Epic) + full markdown attached via `POST /rest/api/3/issue/{key}/attachments` | Manual: markdown → HTML (Python `markdown` lib, `extensions=["tables"]`) → committed to `vppuri-vjra/vjra-research`, served via GitHub Pages custom domain `vjra.us` |
+| **Extraction in `ingest_pinecone.py`** | `MarkItDown().convert(path).text_content` | `get_jira_epic_text("KAN-196")`: `GET /rest/api/3/issue/KAN-196` → `adf_to_text()` flattens description to plain text, then fetches the attachment via its `content` URL (Basic auth) and concatenates | `fetch_url_text(url)`: `urllib` GET of the live HTML page, written to a temp file, then `MarkItDown().convert()` |
+| **doc_id** | e.g. `novacart-product-catalog-docx`, `global-semiconductor-industry-outlook-2025` | `sku-weekly-sales-conversion-kan-196` | `2026-semiconductor-industry-outlook-deloitte-insights` |
+| **Namespace** | `novacart-int` or `novacart-ext` per source | `novacart-int` | `novacart-ext` |
+| **From here on (chunk/embed/upsert/idempotency)** | Identical for all — `chunk_text()` (1500/200), `OpenAI.embeddings.create(text-embedding-3-large, dim=1024)`, delete-then-upsert by `{doc_id}-chunk*`, recorded in `pinecone_ingestion_manifest.json` | Same | Same |
+| **Auth/credentials needed** | None | `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` (Basic auth, `.env`) | None (public page) |
+
+**Why this matters**: re-running `ingest_pinecone.py` always pulls the
+**current live content** for KAN-196 and vjra.us (not a stale local copy) —
+so editing the Jira Epic description/attachment or updating the vjra.us page
+and re-running ingestion picks up those changes automatically, with the same
+no-duplicate/no-orphan guarantees as the local `.docx` files.
+
 ## Cost & token estimate (per full run)
 
 Based on the 2026-06-11 ingestion (531 chunks / 685K chars total) and one
