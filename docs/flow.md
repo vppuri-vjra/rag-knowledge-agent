@@ -60,6 +60,35 @@ Raw sources
 | 4 | Synthesize report | `scripts/generate_monthly_report.py` → `generate_report()` | `format_context()` joins top 12 chunks per side as `[Source: title (source)]\n{text}` blocks, inserted into `REPORT_PROMPT`. Single `oai.chat.completions.create(model="gpt-4o", temperature=0.3)` call. Leading duplicate H1 stripped via regex before writing | `output/monthly_financial_standing_report_YYYY-MM.md` |
 | 5 | Draft email | `scripts/generate_monthly_report.py` → `generate_email()` | Report text inserted into `EMAIL_PROMPT`, single `gpt-4o` call (temperature 0.3) producing subject line + plain-text body | `output/email_draft_YYYY-MM.txt` |
 
+## Cost & token estimate (per full run)
+
+Based on the 2026-06-11 ingestion (531 chunks / 685K chars total) and one
+report+email generation cycle. OpenAI pricing: `text-embedding-3-large`
+$0.13/1M tokens; `gpt-4o` $2.50/1M input tokens, $10.00/1M output tokens.
+Pinecone (`novacart-claudecode`, serverless, ~2MB of vectors) and Jira/GitHub
+Pages publishing are effectively free at this scale.
+
+| Step | Script | Calls | Approx. tokens | Approx. cost |
+|---|---|---|---|---|
+| 1a. Publish SKU data to Jira Epic | `publish_jira_epic.py` | 2 REST calls (issue create + attachment) | n/a | $0 (Jira API, free tier) |
+| 1b. Publish article to vjra.us | manual / GitHub Pages | n/a | n/a | $0 (GitHub Pages hosting) |
+| 2. Ingest: embed 531 chunks | `ingest_pinecone.py` | ~11 embedding batches (≤50 chunks each) | ~171K input tokens | ~$0.022 |
+| 2. Ingest: Pinecone upsert/delete/list | `ingest_pinecone.py` | ~6 upsert batches + list/delete per doc | n/a | ~$0 (serverless free tier covers this volume) |
+| 3. Retrieve: embed 11 queries | `generate_monthly_report.py` | 11 embedding calls | ~165 input tokens | <$0.001 |
+| 3. Retrieve: Pinecone queries | `generate_monthly_report.py` | 11 query calls (top_k=5) | n/a | ~$0 |
+| 4. Synthesize report | `generate_monthly_report.py` | 1 `gpt-4o` call | ~9.4K input / ~0.9K output | ~$0.033 |
+| 5. Draft email | `generate_monthly_report.py` | 1 `gpt-4o` call | ~1.0K input / ~0.2K output | ~$0.005 |
+| **Total (re-ingest all + generate report)** | | | ~182K tokens | **~$0.06** |
+| **Total (report-only run, no re-ingest)** | `generate_monthly_report.py` only | | ~10.6K tokens | **~$0.04** |
+
+Notes:
+- Embedding cost dominates total cost and scales with re-ingestion volume — since
+  ingestion is now incremental/idempotent (see below), re-running after a small
+  doc edit only re-embeds that doc's chunks, not all 531.
+- Token counts are estimated from character counts (~4 chars/token); actual
+  `gpt-4o` token usage is available per-call via `resp.usage` if exact
+  tracking is wanted.
+
 ## Notes / known limitations
 
 - Retrieval queries (steps 3) are static/hardcoded, not dynamically generated from
