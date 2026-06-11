@@ -20,7 +20,7 @@ import certifi
 SSL_CTX = ssl.create_default_context(cafile=certifi.where())
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC_MD = os.path.join(ROOT, "confluence_pages", "sku_weekly_sales_conversion_3y_with_revenue.md")
+SRC_MD = os.path.join(ROOT, "jira_epics", "sku_weekly_sales_conversion_3y_with_revenue.md")
 
 
 def load_env(path):

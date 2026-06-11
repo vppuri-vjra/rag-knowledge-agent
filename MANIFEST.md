@@ -18,7 +18,7 @@ Pinecone index: **novacart-claudecode** (1024-dim, cosine, `text-embedding-3-lar
 |---|---|---|
 | NovaCart_Product_Catalog.docx | `internal/NovaCart_Product_Catalog.docx` | Ingested as-is (.docx) |
 | NovaCart Company Annual Report 2024.docx | `internal/NovaCart Company Annual Report 2024.docx` | Ingested as-is (.docx) |
-| SKU_Weekly_Sales_Conversion_3Y_with_Revenue.docx | **Confluence page** (see below) — converted, not ingested as a file | Source docx archived at `confluence_pages/sku_weekly_sales_conversion_3y_with_revenue.md` |
+| SKU_Weekly_Sales_Conversion_3Y_with_Revenue.docx | **Jira Epic** (see below) — converted, not ingested as a file | Source docx archived at `jira_epics/sku_weekly_sales_conversion_3y_with_revenue.md` |
 
 ### Jira Epic (internal)
 - **Status:** ✅ LIVE
@@ -27,7 +27,7 @@ Pinecone index: **novacart-claudecode** (1024-dim, cosine, `text-embedding-3-lar
 - **Live page URL:** https://vppuri-vjra.atlassian.net/browse/KAN-196
 - **Description:** narrative summary (Executive Summary, Product Overview, per-SKU context)
 - **Attachment:** `sku_weekly_sales_conversion_3y_with_revenue.md` — full 624-row weekly data tables (156 weeks x 4 SKUs)
-- **Source markdown:** `confluence_pages/sku_weekly_sales_conversion_3y_with_revenue.md`
+- **Source markdown:** `jira_epics/sku_weekly_sales_conversion_3y_with_revenue.md`
 - **Ingestion:** point the `novacart-int` ingestion job at the Epic URL above (description + attachment) instead of the .docx
 - **Published via:** `scripts/publish_jira_epic.py`
 
