@@ -13,13 +13,16 @@ Pinecone index: **novacart-claudecode**
 | NovaCart Company Annual Report 2024.docx | `internal/NovaCart Company Annual Report 2024.docx` | Ingested as-is (.docx) |
 | SKU_Weekly_Sales_Conversion_3Y_with_Revenue.docx | **Confluence page** (see below) — converted, not ingested as a file | Source docx archived at `confluence_pages/sku_weekly_sales_conversion_3y_with_revenue.md` |
 
-### Confluence page (internal)
-- **Status:** DRAFT — converted to Markdown, ready to publish
-- **Target site:** https://vppuri-vjra.atlassian.net/wiki
-- **Target space:** NOVACART (Product Finance)
-- **Planned page URL:** https://vppuri-vjra.atlassian.net/wiki/spaces/NOVACART/pages/SKU-Weekly-Sales-Conversion-3Y-with-Revenue
+### Jira Epic (internal)
+- **Status:** ✅ LIVE
+- **Site:** https://vppuri-vjra.atlassian.net (Confluence not enabled on this site — published as a Jira Epic instead)
+- **Project:** KAN
+- **Live page URL:** https://vppuri-vjra.atlassian.net/browse/KAN-196
+- **Description:** narrative summary (Executive Summary, Product Overview, per-SKU context)
+- **Attachment:** `sku_weekly_sales_conversion_3y_with_revenue.md` — full 624-row weekly data tables (156 weeks x 4 SKUs)
 - **Source markdown:** `confluence_pages/sku_weekly_sales_conversion_3y_with_revenue.md`
-- **Action needed:** publish this page in Confluence (manual or via Atlassian API token), then point the `novacart-int` ingestion job at the published page URL instead of the .docx
+- **Ingestion:** point the `novacart-int` ingestion job at the Epic URL above (description + attachment) instead of the .docx
+- **Published via:** `scripts/publish_jira_epic.py`
 
 ## External documents → namespace `novacart-ext`
 
@@ -43,7 +46,7 @@ Pinecone index: **novacart-claudecode**
 |---|---|---|---|
 | 1 | NovaCart Product Catalog | Internal doc | `internal/NovaCart_Product_Catalog.docx` |
 | 2 | NovaCart Company Annual Report 2024 | Internal doc | `internal/NovaCart Company Annual Report 2024.docx` |
-| 3 | SKU Weekly Sales & Conversion (3Y, with Revenue) | Internal — Confluence page (pending publish) | https://vppuri-vjra.atlassian.net/wiki/spaces/NOVACART/pages/SKU-Weekly-Sales-Conversion-3Y-with-Revenue |
+| 3 | SKU Weekly Sales & Conversion (3Y, with Revenue) | Internal — Jira Epic (LIVE) | https://vppuri-vjra.atlassian.net/browse/KAN-196 |
 | 4 | Global Semiconductor Industry Outlook 2025 | External doc | `external/global-semiconductor-industry-outlook-2025.docx` |
 | 5 | Deloitte Tech Trends 2026 | External doc | `external/DI_Tech-trends-2026.docx` |
 | 6 | McKinsey Technology Trends Outlook 2025 | External doc | `external/mckinsey-technology-trends-outlook-2025.docx` |

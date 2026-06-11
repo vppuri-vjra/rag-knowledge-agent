@@ -45,8 +45,10 @@ rag-knowledge-agent/
 Two source documents are **not** ingested as files — they're converted to
 Markdown and published as web pages, then referenced by URL:
 
-1. **SKU_Weekly_Sales_Conversion_3Y_with_Revenue.docx** → internal Confluence page
-   (`confluence_pages/`) — DRAFT, see `MANIFEST.md` for planned page URL and publish status.
+1. **SKU_Weekly_Sales_Conversion_3Y_with_Revenue.docx** → internal Jira Epic
+   (`confluence_pages/`, published via `scripts/publish_jira_epic.py`) — ✅ **LIVE**:
+   https://vppuri-vjra.atlassian.net/browse/KAN-196 (Confluence not enabled on this
+   Atlassian site, so published as a Jira Epic with the full data attached).
 2. **2026 Semiconductor Industry Outlook | Deloitte Insights.docx** → external page on
    vjra.us (`external_site/`) — ✅ **LIVE**: http://vjra.us/research/2026-semiconductor-industry-outlook-deloitte-insights.html
    (hosted via GitHub Pages, repo `vppuri-vjra/vjra-research`)
