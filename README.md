@@ -51,6 +51,14 @@ Run `scripts/ingest_pinecone.py` to (re-)embed and upsert all 7 sources into
 1500 chars / 200 overlap). See `MANIFEST.md` → "Ingestion status" for the
 latest run's vector counts.
 
+Each run is **idempotent and update-safe**: vectors use deterministic IDs
+(`{doc_id}-chunk{N}`), and before upserting, any existing vectors for that
+`doc_id` are deleted first — so re-ingesting an updated document overwrites
+its old chunks rather than creating duplicates, and shrinking documents don't
+leave stale orphaned chunks behind. Each run also writes
+`output/pinecone_ingestion_manifest.json`, recording per-document doc_id,
+namespace, file/URL, chunk count, and vector IDs for traceability.
+
 Requires a `.env` file in the repo root (gitignored) with:
 
 ```

@@ -11,6 +11,14 @@ Pinecone index: **novacart-claudecode** (1024-dim, cosine, `text-embedding-3-lar
 - `novacart-int`: 50 vectors (Product Catalog, Annual Report 2024, SKU Sales Epic KAN-196)
 - `novacart-ext`: 481 vectors (3 outlook docs + live Deloitte vjra.us page)
 - Chunking: 1500 chars, 200 overlap. Re-run the script to refresh/re-embed after source updates.
+- **Update-safe / no duplicates**: each doc gets a deterministic `doc_id` (e.g.
+  `novacart-product-catalog-docx`). Before upserting, the script deletes any
+  existing `{doc_id}-chunk*` vectors in that namespace, then writes fresh
+  chunks. Re-running after a source changes (or shrinks) replaces its vectors
+  in place — no stale or duplicate vectors are left behind.
+- **Traceability**: `output/pinecone_ingestion_manifest.json` records, per
+  document, the `doc_id`, namespace, file/URL, chunk count, and full list of
+  vector IDs from the most recent run.
 
 ## Internal documents → namespace `novacart-int`
 

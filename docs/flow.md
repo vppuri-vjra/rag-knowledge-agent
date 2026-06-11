@@ -55,7 +55,7 @@ Raw sources
 |---|------|--------|-------------------|--------|
 | 1a | Publish internal SKU data | `scripts/publish_jira_epic.py` | Strips metadata HTML comment from the source markdown, splits narrative text from data tables, builds an Atlassian Document Format (ADF) description (headings + paragraphs), `POST /rest/api/3/issue` (issuetype=Epic, project=KAN), then `POST /rest/api/3/issue/{key}/attachments` (multipart) with the full markdown (incl. 624-row weekly tables) | Jira Epic [KAN-196](https://vppuri-vjra.atlassian.net/browse/KAN-196) |
 | 1b | Publish external article | (manual, via `vjra-research` repo) | Markdown -> HTML via Python `markdown` lib (`extensions=["tables"]`), styled template, GitHub Pages custom domain (`vjra.us`, A records to GitHub Pages IPs) | http://vjra.us/research/2026-semiconductor-industry-outlook-deloitte-insights.html |
-| 2 | Extract + chunk + embed + upsert | `scripts/ingest_pinecone.py` | `MarkItDown().convert()` for `.docx`/HTML -> plain text. Jira: `GET /rest/api/3/issue/KAN-196` -> `adf_to_text()` flattens description, attachment fetched via its `content` URL. `chunk_text()`: sliding window, 1500 chars, 200 overlap. `OpenAI.embeddings.create(model="text-embedding-3-large", dimensions=1024)` in batches of 50. `index.upsert()` in batches of 100, namespace = `novacart-int` or `novacart-ext`, metadata = `{title, source, chunk_index, text}` | 531 vectors total in index `novacart-claudecode` |
+| 2 | Extract + chunk + embed + upsert | `scripts/ingest_pinecone.py` | `MarkItDown().convert()` for `.docx`/HTML -> plain text. Jira: `GET /rest/api/3/issue/KAN-196` -> `adf_to_text()` flattens description, attachment fetched via its `content` URL. `chunk_text()`: sliding window, 1500 chars, 200 overlap. For each `doc_id`, deletes any existing `{doc_id}-chunk*` vectors in the namespace first (no duplicates, handles shrinking docs), then `OpenAI.embeddings.create(model="text-embedding-3-large", dimensions=1024)` in batches of 50, `index.upsert()` in batches of 100, namespace = `novacart-int` or `novacart-ext`, metadata = `{title, source, chunk_index, text}` | 531 vectors total in index `novacart-claudecode` + `output/pinecone_ingestion_manifest.json` |
 | 3 | Retrieve | `scripts/generate_monthly_report.py` → `retrieve()` | For each of 11 hardcoded finance/market queries: embed query (same model/dims as ingestion), `index.query(top_k=5, include_metadata=True)` per namespace, dedup matches by vector `id` keeping highest score, sort descending | `internal_chunks` (16), `external_chunks` (18) — counts vary per run as Pinecone/embeddings are not deterministic |
 | 4 | Synthesize report | `scripts/generate_monthly_report.py` → `generate_report()` | `format_context()` joins top 12 chunks per side as `[Source: title (source)]\n{text}` blocks, inserted into `REPORT_PROMPT`. Single `oai.chat.completions.create(model="gpt-4o", temperature=0.3)` call. Leading duplicate H1 stripped via regex before writing | `output/monthly_financial_standing_report_YYYY-MM.md` |
 | 5 | Draft email | `scripts/generate_monthly_report.py` → `generate_email()` | Report text inserted into `EMAIL_PROMPT`, single `gpt-4o` call (temperature 0.3) producing subject line + plain-text body | `output/email_draft_YYYY-MM.txt` |
@@ -64,9 +64,12 @@ Raw sources
 
 - Retrieval queries (steps 3) are static/hardcoded, not dynamically generated from
   the report month or recent changes — same 11 queries run every time.
-- No deduplication/refresh logic in `ingest_pinecone.py` — re-running re-embeds
-  and re-upserts everything (vector IDs are deterministic per chunk index, so
-  re-running overwrites rather than duplicates).
+- `ingest_pinecone.py` is update-safe: for each `doc_id`, it first deletes any
+  existing `{doc_id}-chunk*` vectors in the target namespace, then re-embeds
+  and re-upserts. This prevents duplicates and also clears stale trailing
+  chunks if a source document shrinks. Each run writes
+  `output/pinecone_ingestion_manifest.json` (doc_id, namespace, file/URL,
+  chunk count, vector IDs) for traceability.
 - Email sending is intentionally **not automated** — `output/email_draft_*.txt`
   is for human review before sending via your own email client/tooling.
 - Confluence is not enabled on the Atlassian site used, so the internal SKU

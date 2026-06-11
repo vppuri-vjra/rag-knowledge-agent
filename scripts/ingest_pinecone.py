@@ -71,8 +71,20 @@ def embed_batch(texts):
 def upsert_doc(namespace, doc_id, title, source_url, text):
     chunks = chunk_text(text)
     print(f"  {doc_id}: {len(chunks)} chunks, {len(text)} chars")
+
+    # Remove any previously-ingested chunks for this doc first, so that if the
+    # source shrinks (fewer chunks than before), stale trailing vectors don't
+    # linger. New/changed chunks overwrite in place via deterministic IDs
+    # (no duplicates are ever created for the same doc_id).
+    existing_ids = []
+    for page in index.list(prefix=f"{doc_id}-chunk", namespace=namespace):
+        existing_ids.extend(item.id for item in page.vectors)
+    if existing_ids:
+        index.delete(ids=existing_ids, namespace=namespace)
+
     if not chunks:
-        return 0
+        return 0, []
+
     # batch embed in groups of 50
     vectors = []
     for i in range(0, len(chunks), 50):
@@ -92,7 +104,7 @@ def upsert_doc(namespace, doc_id, title, source_url, text):
             })
     for i in range(0, len(vectors), 100):
         index.upsert(vectors=vectors[i:i + 100], namespace=namespace)
-    return len(vectors)
+    return len(vectors), [v["id"] for v in vectors]
 
 
 # ---------------------------------------------------------------------------
@@ -145,9 +157,10 @@ def get_jira_epic_text(issue_key):
     return f"# {summary}\n\n{description_text}\n{attachment_text}"
 
 
-def ingest_internal():
+def ingest_internal(manifest):
     print("Internal documents -> novacart-int")
     total = 0
+    namespace = "novacart-int"
 
     docx_files = [
         ("NovaCart_Product_Catalog.docx", "internal/NovaCart_Product_Catalog.docx"),
@@ -157,17 +170,21 @@ def ingest_internal():
         path = os.path.join(ROOT, relpath)
         text = md.convert(path).text_content
         doc_id = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
-        total += upsert_doc("novacart-int", doc_id, title, relpath, text)
+        count, ids = upsert_doc(namespace, doc_id, title, relpath, text)
+        total += count
+        manifest.append({"doc_id": doc_id, "title": title, "file": relpath, "index": INDEX_NAME,
+                          "namespace": namespace, "chunk_count": count, "vector_ids": ids})
 
     # Jira Epic KAN-196
+    doc_id = "sku-weekly-sales-conversion-kan-196"
+    title = "SKU Weekly Sales & Conversion - 3Y with Revenue"
+    source = "https://vppuri-vjra.atlassian.net/browse/KAN-196"
     epic_text = get_jira_epic_text("KAN-196")
-    total += upsert_doc(
-        "novacart-int",
-        "sku-weekly-sales-conversion-kan-196",
-        "SKU Weekly Sales & Conversion - 3Y with Revenue",
-        "https://vppuri-vjra.atlassian.net/browse/KAN-196",
-        epic_text,
-    )
+    count, ids = upsert_doc(namespace, doc_id, title, source, epic_text)
+    total += count
+    manifest.append({"doc_id": doc_id, "title": title, "file": source, "index": INDEX_NAME,
+                      "namespace": namespace, "chunk_count": count, "vector_ids": ids})
+
     return total
 
 
@@ -190,9 +207,10 @@ def fetch_url_text(url):
     return text
 
 
-def ingest_external():
+def ingest_external(manifest):
     print("External documents -> novacart-ext")
     total = 0
+    namespace = "novacart-ext"
 
     docx_files = [
         ("Global Semiconductor Industry Outlook 2025", "external/global-semiconductor-industry-outlook-2025.docx"),
@@ -203,27 +221,45 @@ def ingest_external():
         path = os.path.join(ROOT, relpath)
         text = md.convert(path).text_content
         doc_id = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
-        total += upsert_doc("novacart-ext", doc_id, title, relpath, text)
+        count, ids = upsert_doc(namespace, doc_id, title, relpath, text)
+        total += count
+        manifest.append({"doc_id": doc_id, "title": title, "file": relpath, "index": INDEX_NAME,
+                          "namespace": namespace, "chunk_count": count, "vector_ids": ids})
 
     # vjra.us live page
+    doc_id = "2026-semiconductor-industry-outlook-deloitte-insights"
+    title = "2026 Global Semiconductor Industry Outlook (Deloitte Insights)"
     url = "http://vjra.us/research/2026-semiconductor-industry-outlook-deloitte-insights.html"
     text = fetch_url_text(url)
-    total += upsert_doc(
-        "novacart-ext",
-        "2026-semiconductor-industry-outlook-deloitte-insights",
-        "2026 Global Semiconductor Industry Outlook (Deloitte Insights)",
-        url,
-        text,
-    )
+    count, ids = upsert_doc(namespace, doc_id, title, url, text)
+    total += count
+    manifest.append({"doc_id": doc_id, "title": title, "file": url, "index": INDEX_NAME,
+                      "namespace": namespace, "chunk_count": count, "vector_ids": ids})
+
     return total
 
 
 def main():
-    int_count = ingest_internal()
-    ext_count = ingest_external()
+    manifest = []
+    int_count = ingest_internal(manifest)
+    ext_count = ingest_external(manifest)
     print(f"\nDone. Upserted {int_count} vectors -> novacart-int, {ext_count} vectors -> novacart-ext")
     stats = index.describe_index_stats()
     print(stats)
+
+    manifest_path = os.path.join(ROOT, "output", "pinecone_ingestion_manifest.json")
+    os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
+    with open(manifest_path, "w") as f:
+        json.dump({
+            "index": INDEX_NAME,
+            "embedding_model": EMBED_MODEL,
+            "embedding_dimensions": EMBED_DIM,
+            "chunk_size": CHUNK_SIZE,
+            "chunk_overlap": CHUNK_OVERLAP,
+            "ingested_at": __import__("datetime").datetime.now().isoformat(),
+            "documents": manifest,
+        }, f, indent=2)
+    print(f"Ingestion manifest written to {manifest_path}")
 
 
 if __name__ == "__main__":
