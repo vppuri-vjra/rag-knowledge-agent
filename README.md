@@ -36,8 +36,35 @@ rag-knowledge-agent/
 │   └── sku_weekly_sales_conversion_3y_with_revenue.md
 ├── external_site/               # Docs converted for vjra.us external publishing
 │   └── 2026-semiconductor-industry-outlook-deloitte-insights.md
+├── scripts/                      # Ingestion + publishing scripts
+│   ├── ingest_pinecone.py        # Embed + upsert all 7 sources into Pinecone
+│   ├── publish_jira_epic.py      # Publish SKU sales doc as a Jira Epic
+│   └── list_confluence_spaces.py # Check Confluence space access
 ├── docs/                        # Pipeline design notes
 └── MANIFEST.md                  # Full list of knowledge sources + namespaces + URLs
+```
+
+## Pinecone ingestion
+
+Run `scripts/ingest_pinecone.py` to (re-)embed and upsert all 7 sources into
+`novacart-claudecode` (1024-dim, cosine, `text-embedding-3-large`; chunking:
+1500 chars / 200 overlap). See `MANIFEST.md` → "Ingestion status" for the
+latest run's vector counts.
+
+Requires a `.env` file in the repo root (gitignored) with:
+
+```
+OPENAI_API_KEY=sk-...
+PINECONE_API_KEY=pcsk_...
+JIRA_BASE_URL=https://vppuri-vjra.atlassian.net
+JIRA_EMAIL=you@example.com
+JIRA_API_TOKEN=ATATT3...
+JIRA_PROJECT_KEY=KAN
+```
+
+```bash
+pip3 install pinecone openai "markitdown[docx]"
+python3 scripts/ingest_pinecone.py
 ```
 
 ## Special-case documents
