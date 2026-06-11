@@ -67,6 +67,26 @@ pip3 install pinecone openai "markitdown[docx]"
 python3 scripts/ingest_pinecone.py
 ```
 
+## Generating the Monthly Financial Standing Report
+
+`scripts/generate_monthly_report.py` is the Product Finance Reporting Agent:
+
+1. Retrieves top-k context from `novacart-int` (per-product sales performance)
+   and `novacart-ext` (industry outlooks / consumer behavior) for a fixed set
+   of finance-relevant queries
+2. Synthesizes a structured report (Executive Summary, Internal Performance
+   Snapshot, External Market Context, Correlated Insights & Risks,
+   Recommendations) via `gpt-4o`
+3. Drafts a stakeholder email summarizing the report
+
+Outputs to `output/monthly_financial_standing_report_YYYY-MM.md` and
+`output/email_draft_YYYY-MM.txt`. **Sending the email is a separate, manual
+step** — review the draft before sending to stakeholders.
+
+```bash
+python3 scripts/generate_monthly_report.py
+```
+
 ## Special-case documents
 
 Two source documents are **not** ingested as files — they're converted to
