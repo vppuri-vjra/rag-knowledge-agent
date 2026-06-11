@@ -46,13 +46,13 @@ Two source documents are **not** ingested as files — they're converted to
 Markdown and published as web pages, then referenced by URL:
 
 1. **SKU_Weekly_Sales_Conversion_3Y_with_Revenue.docx** → internal Confluence page
-   (`confluence_pages/`) — see `MANIFEST.md` for planned page URL and publish status.
+   (`confluence_pages/`) — DRAFT, see `MANIFEST.md` for planned page URL and publish status.
 2. **2026 Semiconductor Industry Outlook | Deloitte Insights.docx** → external page on
-   vjra.us (`external_site/`) — see `MANIFEST.md` for planned page URL and publish status.
+   vjra.us (`external_site/`) — ✅ **LIVE**: http://vjra.us/research/2026-semiconductor-industry-outlook-deloitte-insights.html
+   (hosted via GitHub Pages, repo `vppuri-vjra/vjra-research`)
 
-Both are currently in **DRAFT** status (converted, not yet live) — see `MANIFEST.md`
-for the "Action needed" steps to publish each one and switch ingestion from the
-draft Markdown to the live URL.
+See `MANIFEST.md` for full status and the `novacart-int`/`novacart-ext` ingestion
+references for each.
 
 ## See also
 

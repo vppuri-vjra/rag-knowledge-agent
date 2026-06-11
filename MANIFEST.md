@@ -31,11 +31,11 @@ Pinecone index: **novacart-claudecode**
 | 2026 Semiconductor Industry Outlook \| Deloitte Insights.docx | **External URL on vjra.us** (see below) — converted, not ingested as a file | Source docx archived at `external_site/2026-semiconductor-industry-outlook-deloitte-insights.md` |
 
 ### External URL (vjra.us)
-- **Status:** DRAFT — converted to Markdown, ready to publish
-- **Target site:** https://vjra.us
-- **Planned page URL:** https://vjra.us/research/2026-semiconductor-industry-outlook-deloitte-insights
+- **Status:** ✅ LIVE
+- **Site:** https://vjra.us (hosted via GitHub Pages, repo `vppuri-vjra/vjra-research`)
+- **Live page URL:** http://vjra.us/research/2026-semiconductor-industry-outlook-deloitte-insights.html
 - **Source markdown:** `external_site/2026-semiconductor-industry-outlook-deloitte-insights.md`
-- **Action needed:** configure vjra.us to serve this page (e.g., add to the existing vjra-soul-seva site or a new `/research` section), then point the `novacart-ext` ingestion job at the published vjra.us URL instead of the .docx
+- **Ingestion:** point the `novacart-ext` ingestion job at the live vjra.us URL above instead of the .docx
 
 ## Summary
 
@@ -47,4 +47,4 @@ Pinecone index: **novacart-claudecode**
 | 4 | Global Semiconductor Industry Outlook 2025 | External doc | `external/global-semiconductor-industry-outlook-2025.docx` |
 | 5 | Deloitte Tech Trends 2026 | External doc | `external/DI_Tech-trends-2026.docx` |
 | 6 | McKinsey Technology Trends Outlook 2025 | External doc | `external/mckinsey-technology-trends-outlook-2025.docx` |
-| 7 | 2026 Semiconductor Industry Outlook (Deloitte Insights) | External — vjra.us page (pending publish) | https://vjra.us/research/2026-semiconductor-industry-outlook-deloitte-insights |
+| 7 | 2026 Semiconductor Industry Outlook (Deloitte Insights) | External — vjra.us page (LIVE) | http://vjra.us/research/2026-semiconductor-industry-outlook-deloitte-insights.html |
