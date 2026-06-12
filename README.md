@@ -105,7 +105,7 @@ Markdown and published as web pages, then referenced by URL:
    https://vppuri-vjra.atlassian.net/browse/KAN-196 (Confluence not enabled on this
    Atlassian site, so published as a Jira Epic with the full data attached).
 2. **2026 Semiconductor Industry Outlook | Deloitte Insights.docx** → external page on
-   vjra.us (`external_site/`) — ✅ **LIVE**: http://vjra.us/research/2026-semiconductor-industry-outlook-deloitte-insights.html
+   vjra.us (`external_site/`) — ✅ **LIVE**: https://vjra.us/research/2026-semiconductor-industry-outlook-deloitte-insights.html
    (hosted via GitHub Pages, repo `vppuri-vjra/vjra-research`)
 
 See `MANIFEST.md` for full status and the `novacart-int`/`novacart-ext` ingestion
