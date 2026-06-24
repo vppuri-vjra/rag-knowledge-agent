@@ -436,6 +436,7 @@
   <div class="tab-bar">
     <button class="tab active" onclick="switchTab('overview')">Business Problem &amp; Solution</button>
     <button class="tab" onclick="switchTab('chat')">Knowledge Agent</button>
+    <button class="tab" onclick="switchTab('email')">Draft Email</button>
   </div>
 
   <!-- Tab 1: Overview -->
@@ -557,21 +558,69 @@
             </div>
           </div>
 
+          <!-- EXTRACTION PATHS (3 ingestion paths) -->
+          <div style="border:1px solid #ddd8d0;border-radius:10px;padding:.75rem 1rem;background:#fff;margin-bottom:.5rem;box-shadow:0 1px 3px rgba(0,0,0,.04);">
+            <div style="font-family:'Inter',sans-serif;font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:.5rem;">Document Extraction Paths</div>
+            <div class="card-grid-3" style="padding:0;gap:.5rem;">
+
+              <!-- .docx path -->
+              <div style="border:1px solid rgba(45,106,79,.3);border-radius:7px;padding:.5rem .6rem;background:#f0fdf6;">
+                <div style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;color:#2d6a4f;margin-bottom:.3rem;">📄 .docx Files <span style="font-weight:400;color:#767676;">(5 docs)</span></div>
+                <div style="font-size:.58rem;color:#767676;line-height:1.55;">
+                  <strong style="color:#1a1a2e;">Tool:</strong> MarkItDown<br>
+                  <code style="font-size:.55rem;background:#e8f5e9;padding:1px 3px;border-radius:2px;color:#2d6a4f;">MarkItDown().convert(path).text_content</code><br>
+                  Converts .docx → plain text<br>
+                  <strong style="color:#1a1a2e;">Docs:</strong> Product Catalog, Annual Report, 3 market outlook reports
+                </div>
+              </div>
+
+              <!-- Jira path -->
+              <div style="border:1px solid rgba(180,83,9,.3);border-radius:7px;padding:.5rem .6rem;background:#fffbf0;">
+                <div style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;color:#92400e;margin-bottom:.3rem;">🎫 Jira Epic <span style="font-weight:400;color:#767676;">(KAN-196)</span></div>
+                <div style="font-size:.58rem;color:#767676;line-height:1.55;">
+                  <strong style="color:#1a1a2e;">Tool:</strong> Jira REST API<br>
+                  <code style="font-size:.55rem;background:#fef3c7;padding:1px 3px;border-radius:2px;color:#92400e;">GET /rest/api/3/issue/KAN-196</code><br>
+                  <strong style="color:#1a1a2e;">Description:</strong> ADF → <code style="font-size:.55rem;background:#fef3c7;padding:1px 3px;border-radius:2px;color:#92400e;">adf_to_text()</code> flattens to plain text<br>
+                  <strong style="color:#1a1a2e;">Attachment:</strong> .md file fetched via content URL (Basic auth)<br>
+                  624-row weekly sales data (156 wks × 4 SKUs)
+                </div>
+              </div>
+
+              <!-- HTML/vjra.us path -->
+              <div style="border:1px solid rgba(109,40,217,.3);border-radius:7px;padding:.5rem .6rem;background:#f8f5ff;">
+                <div style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;color:#5b21b6;margin-bottom:.3rem;">🌐 vjra.us Page <span style="font-weight:400;color:#767676;">(live HTML)</span></div>
+                <div style="font-size:.58rem;color:#767676;line-height:1.55;">
+                  <strong style="color:#1a1a2e;">Tool:</strong> MarkItDown + urllib<br>
+                  <code style="font-size:.55rem;background:#ede9fe;padding:1px 3px;border-radius:2px;color:#5b21b6;">fetch_url_text(url)</code><br>
+                  urllib GET → temp file → <code style="font-size:.55rem;background:#ede9fe;padding:1px 3px;border-radius:2px;color:#5b21b6;">MarkItDown().convert()</code><br>
+                  <strong style="color:#1a1a2e;">Source:</strong> Deloitte 2026 semiconductor outlook<br>
+                  Re-ingestion pulls live content (not stale copy)
+                </div>
+              </div>
+
+            </div>
+            <div style="margin-top:.45rem;font-family:'Inter',sans-serif;font-size:.55rem;color:#a8a29e;text-align:center;">All 3 paths converge into the same chunk → embed → upsert pipeline below</div>
+          </div>
+
+          <!-- connector -->
+          <div style="display:flex;justify-content:center;"><div style="width:1px;height:14px;background:rgba(45,106,79,.3);"></div></div>
+
           <!-- STEP 2: INGEST -->
           <div style="border:1px solid rgba(45,106,79,.35);border-radius:10px;padding:.75rem 1rem;background:rgba(255,255,255,.7);margin-bottom:.5rem;box-shadow:0 1px 4px rgba(0,0,0,.05);">
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;">
               <span style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1rem;color:#1a1a2e;">2. Ingest</span>
-              <span style="font-family:'Inter',sans-serif;font-size:.58rem;color:#767676;">Extract → Chunk (1500/200) → Embed (text-embedding-3-large) → Upsert Pinecone</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;color:#767676;">Chunk (1500/200) → Embed (text-embedding-3-large, 1024-dim) → Upsert Pinecone</span>
             </div>
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0fdf6;border:1px solid rgba(45,106,79,.3);padding:.15rem .4rem;border-radius:3px;color:#2d6a4f;">Extract text</span>
-              <span style="color:#ddd8d0;">→</span>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.35rem;">
               <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0fdf6;border:1px solid rgba(45,106,79,.3);padding:.15rem .4rem;border-radius:3px;color:#2d6a4f;">Chunk 1500/200</span>
               <span style="color:#ddd8d0;">→</span>
               <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0fdf6;border:1px solid rgba(45,106,79,.3);padding:.15rem .4rem;border-radius:3px;color:#2d6a4f;">Embed 1024-dim</span>
               <span style="color:#ddd8d0;">→</span>
-              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0fdf6;border:1px solid rgba(45,106,79,.3);padding:.15rem .4rem;border-radius:3px;color:#2d6a4f;">Upsert</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0fdf6;border:1px solid rgba(45,106,79,.3);padding:.15rem .4rem;border-radius:3px;color:#2d6a4f;">Delete stale vectors</span>
+              <span style="color:#ddd8d0;">→</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0fdf6;border:1px solid rgba(45,106,79,.3);padding:.15rem .4rem;border-radius:3px;color:#2d6a4f;">Upsert (batch 100)</span>
             </div>
+            <div style="font-family:'Inter',sans-serif;font-size:.55rem;color:#a8a29e;line-height:1.5;">Idempotent: deletes existing <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">{doc_id}-chunk*</code> before re-upserting — no duplicates, handles shrinking docs</div>
           </div>
 
           <!-- connector to Pinecone -->
@@ -668,6 +717,206 @@
                 <div><div style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:600;color:#1a1a2e;">GitHub Pages</div><div style="font-family:'Inter',sans-serif;font-size:.55rem;color:#767676;">Static hosting · no backend · CDN cache</div></div>
               </div>
             </div>
+          </div>
+
+          <!-- ── SOURCE MANIFEST ── -->
+          <div style="border-top:1px solid #e8e6e1;padding-top:.75rem;margin-top:.75rem;">
+            <div style="font-family:'Inter',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.12em;color:#a8a29e;text-transform:uppercase;text-align:center;margin-bottom:.55rem;">Source Manifest — 7 Documents</div>
+
+            <!-- Internal -->
+            <div style="margin-bottom:.5rem;">
+              <div style="font-family:'Inter',sans-serif;font-size:.55rem;font-weight:700;color:#2d6a4f;margin-bottom:.3rem;display:flex;align-items:center;gap:.3rem;">
+                <span style="width:6px;height:6px;border-radius:50%;background:#2d6a4f;display:inline-block;"></span>
+                novacart-int — 50 vectors
+              </div>
+              <div style="display:flex;flex-direction:column;gap:.25rem;">
+                <div style="display:flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e8e6e1;border-radius:5px;padding:.3rem .55rem;">
+                  <span style="font-size:.75rem;">📄</span>
+                  <div style="flex:1;"><span style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:600;color:#1a1a2e;">NovaCart Product Catalog</span><span style="font-family:'Inter',sans-serif;font-size:.55rem;color:#a8a29e;margin-left:.4rem;">2 chunks</span></div>
+                  <span style="font-family:'Inter',sans-serif;font-size:.52rem;color:#767676;background:#f0fdf6;padding:.1rem .3rem;border-radius:2px;">.docx → MarkItDown</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e8e6e1;border-radius:5px;padding:.3rem .55rem;">
+                  <span style="font-size:.75rem;">📄</span>
+                  <div style="flex:1;"><span style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:600;color:#1a1a2e;">NovaCart Annual Report 2024</span><span style="font-family:'Inter',sans-serif;font-size:.55rem;color:#a8a29e;margin-left:.4rem;">6 chunks</span></div>
+                  <span style="font-family:'Inter',sans-serif;font-size:.52rem;color:#767676;background:#f0fdf6;padding:.1rem .3rem;border-radius:2px;">.docx → MarkItDown</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e8e6e1;border-radius:5px;padding:.3rem .55rem;">
+                  <span style="font-size:.75rem;">🎫</span>
+                  <div style="flex:1;"><span style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:600;color:#1a1a2e;">SKU Weekly Sales & Conversion (3Y)</span><span style="font-family:'Inter',sans-serif;font-size:.55rem;color:#a8a29e;margin-left:.4rem;">42 chunks</span></div>
+                  <span style="font-family:'Inter',sans-serif;font-size:.52rem;color:#767676;background:#fffbf0;padding:.1rem .3rem;border-radius:2px;">Jira KAN-196</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- External -->
+            <div>
+              <div style="font-family:'Inter',sans-serif;font-size:.55rem;font-weight:700;color:#b45309;margin-bottom:.3rem;display:flex;align-items:center;gap:.3rem;">
+                <span style="width:6px;height:6px;border-radius:50%;background:#b45309;display:inline-block;"></span>
+                novacart-ext — 481 vectors
+              </div>
+              <div style="display:flex;flex-direction:column;gap:.25rem;">
+                <div style="display:flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e8e6e1;border-radius:5px;padding:.3rem .55rem;">
+                  <span style="font-size:.75rem;">📄</span>
+                  <div style="flex:1;"><span style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:600;color:#1a1a2e;">Global Semiconductor Outlook 2025</span><span style="font-family:'Inter',sans-serif;font-size:.55rem;color:#a8a29e;margin-left:.4rem;">54 chunks</span></div>
+                  <span style="font-family:'Inter',sans-serif;font-size:.52rem;color:#767676;background:#f0fdf6;padding:.1rem .3rem;border-radius:2px;">.docx → MarkItDown</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e8e6e1;border-radius:5px;padding:.3rem .55rem;">
+                  <span style="font-size:.75rem;">📄</span>
+                  <div style="flex:1;"><span style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:600;color:#1a1a2e;">Deloitte Tech Trends 2026</span><span style="font-family:'Inter',sans-serif;font-size:.55rem;color:#a8a29e;margin-left:.4rem;">168 chunks</span></div>
+                  <span style="font-family:'Inter',sans-serif;font-size:.52rem;color:#767676;background:#f0fdf6;padding:.1rem .3rem;border-radius:2px;">.docx → MarkItDown</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e8e6e1;border-radius:5px;padding:.3rem .55rem;">
+                  <span style="font-size:.75rem;">📄</span>
+                  <div style="flex:1;"><span style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:600;color:#1a1a2e;">McKinsey Tech Trends 2025</span><span style="font-family:'Inter',sans-serif;font-size:.55rem;color:#a8a29e;margin-left:.4rem;">231 chunks</span></div>
+                  <span style="font-family:'Inter',sans-serif;font-size:.52rem;color:#767676;background:#f0fdf6;padding:.1rem .3rem;border-radius:2px;">.docx → MarkItDown</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e8e6e1;border-radius:5px;padding:.3rem .55rem;">
+                  <span style="font-size:.75rem;">🌐</span>
+                  <div style="flex:1;"><span style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:600;color:#1a1a2e;">Deloitte Semiconductor 2026</span><span style="font-family:'Inter',sans-serif;font-size:.55rem;color:#a8a29e;margin-left:.4rem;">28 chunks</span></div>
+                  <span style="font-family:'Inter',sans-serif;font-size:.52rem;color:#767676;background:#f8f5ff;padding:.1rem .3rem;border-radius:2px;">vjra.us live page</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── SCRIPTS & FUNCTIONS ── -->
+          <div style="border-top:1px solid #e8e6e1;padding-top:.75rem;margin-top:.75rem;">
+            <div style="font-family:'Inter',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.12em;color:#a8a29e;text-transform:uppercase;text-align:center;margin-bottom:.55rem;">Scripts & Key Functions</div>
+            <div class="card-grid-3" style="padding:0;gap:.4rem;">
+
+              <div style="background:#fff;border:1px solid #e8e6e1;border-radius:7px;padding:.55rem .6rem;">
+                <div style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;color:#1a1a2e;margin-bottom:.25rem;">📝 publish_jira_epic.py</div>
+                <div style="font-size:.55rem;color:#767676;line-height:1.5;">
+                  Strips metadata from source .md<br>
+                  Builds ADF description (headings + paragraphs)<br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">POST /rest/api/3/issue</code> → Epic<br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">POST .../attachments</code> → .md file
+                </div>
+              </div>
+
+              <div style="background:#fff;border:1px solid #e8e6e1;border-radius:7px;padding:.55rem .6rem;">
+                <div style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;color:#1a1a2e;margin-bottom:.25rem;">📥 ingest_pinecone.py</div>
+                <div style="font-size:.55rem;color:#767676;line-height:1.5;">
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">chunk_text()</code> — sliding window 1500/200<br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">adf_to_text()</code> — Jira ADF → plain text<br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">fetch_url_text()</code> — live URL → text<br>
+                  Embeds in batches of 50, upserts in batches of 100<br>
+                  Writes <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">pinecone_ingestion_manifest.json</code>
+                </div>
+              </div>
+
+              <div style="background:#fff;border:1px solid #e8e6e1;border-radius:7px;padding:.55rem .6rem;">
+                <div style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;color:#1a1a2e;margin-bottom:.25rem;">📊 generate_monthly_report.py</div>
+                <div style="font-size:.55rem;color:#767676;line-height:1.5;">
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">retrieve()</code> — 11 queries, dedup by ID<br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">format_context()</code> — top 12 chunks per side<br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">REPORT_PROMPT</code> → GPT-4o → .md report<br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">EMAIL_PROMPT</code> → GPT-4o → stakeholder email
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── RETRIEVAL QUERIES ── -->
+          <div style="border-top:1px solid #e8e6e1;padding-top:.75rem;margin-top:.75rem;">
+            <div style="font-family:'Inter',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.12em;color:#a8a29e;text-transform:uppercase;text-align:center;margin-bottom:.55rem;">Retrieval Queries — 11 Hardcoded</div>
+            <div class="card-grid-2" style="padding:0;gap:.5rem;">
+
+              <div style="background:#fff;border:1px solid rgba(45,106,79,.3);border-radius:7px;padding:.55rem .65rem;">
+                <div style="font-family:'Inter',sans-serif;font-size:.58rem;font-weight:700;color:#2d6a4f;margin-bottom:.3rem;display:flex;align-items:center;gap:.3rem;">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#2d6a4f;display:inline-block;"></span>
+                  Finance Queries → novacart-int (6)
+                </div>
+                <div style="font-size:.55rem;color:#767676;line-height:1.7;">
+                  • NovaCart quarterly revenue and profit margins<br>
+                  • NovaPhone X1 sales volume and trends<br>
+                  • NovaHome SmartHub Pro performance<br>
+                  • NovaFit Active Watch unit sales<br>
+                  • NovaCart Essentials subscription churn rate<br>
+                  • Year-over-year product line comparison
+                </div>
+              </div>
+
+              <div style="background:#fff;border:1px solid rgba(180,83,9,.3);border-radius:7px;padding:.55rem .65rem;">
+                <div style="font-family:'Inter',sans-serif;font-size:.58rem;font-weight:700;color:#b45309;margin-bottom:.3rem;display:flex;align-items:center;gap:.3rem;">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#b45309;display:inline-block;"></span>
+                  Market Queries → novacart-ext (5)
+                </div>
+                <div style="font-size:.55rem;color:#767676;line-height:1.7;">
+                  • Global semiconductor market outlook and growth<br>
+                  • Memory pricing trends and supply constraints<br>
+                  • Consumer electronics demand forecast<br>
+                  • AI chip market size and investment trends<br>
+                  • Technology trends impacting consumer hardware
+                </div>
+              </div>
+
+            </div>
+            <div style="font-family:'Inter',sans-serif;font-size:.52rem;color:#a8a29e;text-align:center;margin-top:.35rem;">Each query: embed → query Pinecone (top_k=5) → dedup by vector ID keeping highest score → sort descending</div>
+          </div>
+
+          <!-- ── ENVIRONMENT & CONFIG ── -->
+          <div style="border-top:1px solid #e8e6e1;padding-top:.75rem;margin-top:.75rem;">
+            <div style="font-family:'Inter',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.12em;color:#a8a29e;text-transform:uppercase;text-align:center;margin-bottom:.55rem;">Environment & Config</div>
+            <div class="card-grid-2" style="padding:0;gap:.4rem;">
+
+              <div style="background:#fff;border:1px solid #e8e6e1;border-radius:7px;padding:.5rem .6rem;">
+                <div style="font-family:'Inter',sans-serif;font-size:.58rem;font-weight:700;color:#1a1a2e;margin-bottom:.2rem;">🔑 Required .env Variables</div>
+                <div style="font-size:.55rem;color:#767676;line-height:1.65;">
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">OPENAI_API_KEY</code> — embeddings + report generation<br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">PINECONE_API_KEY</code> — vector store access<br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">JIRA_BASE_URL</code> — Atlassian site URL<br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">JIRA_EMAIL</code> — Basic auth email<br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">JIRA_API_TOKEN</code> — Basic auth token
+                </div>
+              </div>
+
+              <div style="background:#fff;border:1px solid #e8e6e1;border-radius:7px;padding:.5rem .6rem;">
+                <div style="font-family:'Inter',sans-serif;font-size:.58rem;font-weight:700;color:#1a1a2e;margin-bottom:.2rem;">📋 Output Artifacts</div>
+                <div style="font-size:.55rem;color:#767676;line-height:1.65;">
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">output/monthly_financial_standing_report_YYYY-MM.md</code><br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">output/email_draft_YYYY-MM.txt</code><br>
+                  <code style="font-size:.52rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">output/pinecone_ingestion_manifest.json</code><br>
+                  <span style="font-size:.52rem;color:#a8a29e;font-style:italic;">Manifest records: doc_id, namespace, chunk count, vector IDs</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── COST ESTIMATE ── -->
+          <div style="border-top:1px solid #e8e6e1;padding-top:.75rem;margin-top:.75rem;">
+            <div style="font-family:'Inter',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.12em;color:#a8a29e;text-transform:uppercase;text-align:center;margin-bottom:.55rem;">Cost per Run</div>
+            <div style="background:#fff;border:1px solid #e8e6e1;border-radius:8px;overflow:hidden;">
+              <table style="width:100%;font-family:'Inter',sans-serif;font-size:.58rem;border-collapse:collapse;">
+                <thead>
+                  <tr style="background:var(--surface);">
+                    <th style="text-align:left;padding:.4rem .6rem;font-weight:700;color:var(--ink);border-bottom:1px solid #e8e6e1;">Step</th>
+                    <th style="text-align:left;padding:.4rem .6rem;font-weight:700;color:var(--ink);border-bottom:1px solid #e8e6e1;">Calls</th>
+                    <th style="text-align:right;padding:.4rem .6rem;font-weight:700;color:var(--ink);border-bottom:1px solid #e8e6e1;">Tokens</th>
+                    <th style="text-align:right;padding:.4rem .6rem;font-weight:700;color:var(--ink);border-bottom:1px solid #e8e6e1;">Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td style="padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">Embed 531 chunks</td><td style="padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">~11 batches</td><td style="text-align:right;padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">~171K</td><td style="text-align:right;padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">$0.022</td></tr>
+                  <tr><td style="padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">Embed 11 queries</td><td style="padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">11 calls</td><td style="text-align:right;padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">~165</td><td style="text-align:right;padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">&lt;$0.001</td></tr>
+                  <tr><td style="padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">Synthesize report</td><td style="padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">1 GPT-4o</td><td style="text-align:right;padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">~10.3K</td><td style="text-align:right;padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">$0.033</td></tr>
+                  <tr><td style="padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">Draft email</td><td style="padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">1 GPT-4o</td><td style="text-align:right;padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">~1.2K</td><td style="text-align:right;padding:.3rem .6rem;border-bottom:1px solid #f4f3f0;color:#767676;">$0.005</td></tr>
+                  <tr style="background:#f8f4ee;">
+                    <td colspan="2" style="padding:.4rem .6rem;font-weight:700;color:var(--ink);">Full run (re-ingest + report)</td>
+                    <td style="text-align:right;padding:.4rem .6rem;font-weight:700;color:var(--ink);">~182K</td>
+                    <td style="text-align:right;padding:.4rem .6rem;font-weight:700;color:var(--accent);">~$0.06</td>
+                  </tr>
+                  <tr style="background:#f8f4ee;">
+                    <td colspan="2" style="padding:.4rem .6rem;font-weight:600;color:#767676;">Report-only (no re-ingest)</td>
+                    <td style="text-align:right;padding:.4rem .6rem;font-weight:600;color:#767676;">~10.6K</td>
+                    <td style="text-align:right;padding:.4rem .6rem;font-weight:600;color:var(--accent);">~$0.04</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="font-family:'Inter',sans-serif;font-size:.52rem;color:#a8a29e;text-align:center;margin-top:.3rem;">Pinecone serverless + Jira API + GitHub Pages = $0. Pricing: text-embedding-3-large $0.13/1M tok · GPT-4o $2.50/$10 per 1M in/out tok</div>
           </div>
 
         </div>
@@ -804,6 +1053,144 @@
     </aside>
   </div>
   </div><!-- #tab-chat -->
+
+  <!-- Tab 3: Draft Email -->
+  <div id="tab-email" class="tab-panel" style="flex-direction:column;padding:1.25rem;">
+
+    <!-- How it works -->
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:.75rem;">
+      <div style="background:var(--surface);padding:.5rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);">How This Email Is Generated</span>
+      </div>
+      <div style="padding:.75rem 1rem;font-size:.78rem;color:var(--muted);line-height:1.65;">
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.5rem;">
+          <span style="background:#f0fdf4;border:1px solid #4ade80;padding:.2rem .5rem;border-radius:4px;font-size:.65rem;font-weight:600;color:#166534;">Monthly Report</span>
+          <span style="color:var(--border);">→</span>
+          <span style="background:#fffbeb;border:1px solid #fbbf24;padding:.2rem .5rem;border-radius:4px;font-size:.65rem;font-weight:600;color:#92400e;">GPT-4o (temp 0.3)</span>
+          <span style="color:var(--border);">→</span>
+          <span style="background:#f5f3ff;border:1px solid #a78bfa;padding:.2rem .5rem;border-radius:4px;font-size:.65rem;font-weight:600;color:#5b21b6;">Stakeholder Email</span>
+        </div>
+        The synthesized Monthly Financial Standing Report is passed to <strong style="color:var(--ink);">GPT-4o</strong> with an email prompt that extracts the top 3 takeaways and formats a concise stakeholder message. Sending is <strong style="color:var(--ink);">manual</strong> — the draft is for human review before dispatch.
+      </div>
+    </div>
+
+    <!-- Email preview -->
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;flex:1;display:flex;flex-direction:column;">
+      <div style="background:var(--surface);padding:.5rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);">Email Preview — June 2026</span>
+        <button onclick="regenerateEmail()" style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:600;background:var(--accent);color:#fff;border:none;padding:.3rem .7rem;border-radius:5px;cursor:pointer;">Regenerate with Claude</button>
+      </div>
+      <div id="email-body" style="padding:1rem 1.25rem;flex:1;overflow-y:auto;">
+
+        <!-- Subject line -->
+        <div style="margin-bottom:.75rem;padding-bottom:.65rem;border-bottom:1px solid var(--border);">
+          <div style="font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.2rem;">Subject</div>
+          <div id="email-subject" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.05rem;color:var(--ink);">Key Insights from June 2026 Monthly Financial Standing Report</div>
+        </div>
+
+        <!-- To / From -->
+        <div style="display:flex;gap:1.5rem;margin-bottom:.75rem;padding-bottom:.65rem;border-bottom:1px solid var(--border);">
+          <div>
+            <span style="font-family:'Inter',sans-serif;font-size:.58rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">From</span>
+            <div style="font-size:.75rem;color:var(--ink);margin-top:.1rem;">NovaCart Product Finance Reporting Agent</div>
+          </div>
+          <div>
+            <span style="font-family:'Inter',sans-serif;font-size:.58rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">To</span>
+            <div style="font-size:.75rem;color:var(--ink);margin-top:.1rem;">Leadership Stakeholders</div>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div id="email-content" style="font-size:.82rem;color:#2b2b2b;line-height:1.75;">
+          <p>Dear Stakeholders,</p>
+          <p>I hope this message finds you well. As we review NovaCart's financial performance for June 2026, I wanted to highlight a few critical insights from our latest report.</p>
+          <ul style="margin:.5rem 0;padding-left:1.2rem;">
+            <li style="margin-bottom:.4rem;">NovaCart's strategic focus on subscription services and smart home devices has positioned us well for sustained growth, despite challenges like rising memory prices and a potential slowdown in smartphone demand.</li>
+            <li style="margin-bottom:.4rem;">The NovaPhone X1, while historically strong, faces a cautious outlook due to anticipated declines in smartphone demand. Strategic marketing efforts will be essential to maintain market share.</li>
+            <li style="margin-bottom:.4rem;">Our NovaHome SmartHub Pro and NovaFit Active Watch continue to perform steadily, but rising memory prices could pressure margins, necessitating careful cost management.</li>
+          </ul>
+          <p>The full report is attached for your review. Please feel free to reach out with any questions or for further discussion.</p>
+          <p style="margin-top:.75rem;">Best regards,<br><strong>NovaCart Product Finance Reporting Agent</strong></p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Attached Report -->
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:.75rem;">
+      <div onclick="document.getElementById('reportBody').style.display=document.getElementById('reportBody').style.display==='none'?'block':'none';this.querySelector('.toggle-arrow').textContent=document.getElementById('reportBody').style.display==='none'?'▶':'▼'" style="background:var(--surface);padding:.55rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);">📎 Attached — Monthly Financial Standing Report (June 2026)</span>
+        <span class="toggle-arrow" style="font-size:.7rem;color:var(--muted);">▶</span>
+      </div>
+      <div id="reportBody" style="display:none;padding:1rem 1.25rem;font-size:.78rem;color:#2b2b2b;line-height:1.75;max-height:60vh;overflow-y:auto;">
+        <h3 style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.15rem;color:var(--ink);margin-bottom:.5rem;font-weight:400;">Executive Summary</h3>
+        <p>In June 2026, NovaCart remains a strong player in the consumer electronics market, benefiting from its diversified product portfolio. Despite challenges in the broader market, such as rising memory prices and a potential slowdown in smartphone demand, NovaCart's strategic focus on subscription services and smart home devices has positioned it well for sustained growth.</p>
+
+        <h3 style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.05rem;color:var(--ink);margin:1rem 0 .4rem;font-weight:400;">Internal Performance Snapshot</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
+          <div style="background:var(--surface);border-radius:6px;padding:.5rem .65rem;">
+            <div style="font-family:'Inter',sans-serif;font-size:.65rem;font-weight:700;color:var(--ink);margin-bottom:.15rem;">NovaPhone X1</div>
+            <div style="font-size:.7rem;color:var(--muted);line-height:1.5;">Revenue: $1.62B (FY2024) · Margin: 38%<br>~1.9M units · Cautious outlook</div>
+          </div>
+          <div style="background:var(--surface);border-radius:6px;padding:.5rem .65rem;">
+            <div style="font-family:'Inter',sans-serif;font-size:.65rem;font-weight:700;color:var(--ink);margin-bottom:.15rem;">NovaHome SmartHub Pro</div>
+            <div style="font-size:.7rem;color:var(--muted);line-height:1.5;">$320.3M aggregate (3Y) · 9,618 units/wk<br>Stable · Memory price pressure</div>
+          </div>
+          <div style="background:var(--surface);border-radius:6px;padding:.5rem .65rem;">
+            <div style="font-family:'Inter',sans-serif;font-size:.65rem;font-weight:700;color:var(--ink);margin-bottom:.15rem;">NovaFit Active Watch</div>
+            <div style="font-size:.7rem;color:var(--muted);line-height:1.5;">$444.5M aggregate (3Y) · 9,581 units/wk<br>Consistent · Health market tailwind</div>
+          </div>
+          <div style="background:var(--surface);border-radius:6px;padding:.5rem .65rem;">
+            <div style="font-family:'Inter',sans-serif;font-size:.65rem;font-weight:700;color:var(--ink);margin-bottom:.15rem;">NovaCart Essentials</div>
+            <div style="font-size:.7rem;color:var(--muted);line-height:1.5;">$19.2M aggregate (3Y) · 9,731 units/wk<br>4.1% churn · Strong recurring revenue</div>
+          </div>
+        </div>
+
+        <h3 style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.05rem;color:var(--ink);margin:1rem 0 .4rem;font-weight:400;">External Market Context</h3>
+        <ul style="padding-left:1.2rem;color:var(--muted);font-size:.75rem;line-height:1.7;">
+          <li>Semiconductor market projected at <strong style="color:var(--ink);">$975B</strong> in 2026, driven by AI infrastructure</li>
+          <li>Memory prices surged <strong style="color:var(--ink);">~4×</strong>, further 50% increases expected Q1–Q2 2026</li>
+          <li>Smartphone and PC sales expected to <strong style="color:var(--ink);">decline</strong> due to memory costs</li>
+          <li>AI chip demand strong but concentrated risk — ROI uncertainty</li>
+        </ul>
+
+        <h3 style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.05rem;color:var(--ink);margin:1rem 0 .4rem;font-weight:400;">Correlated Insights & Risks</h3>
+        <div style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.5rem;">
+          <div style="font-size:.72rem;padding:.35rem .5rem;background:#fef2f2;border-left:2px solid #f87171;border-radius:0 4px 4px 0;color:#7f1d1d;line-height:1.45;">Memory price spikes could squeeze NovaHome SmartHub Pro margins</div>
+          <div style="font-size:.72rem;padding:.35rem .5rem;background:#fef2f2;border-left:2px solid #f87171;border-radius:0 4px 4px 0;color:#7f1d1d;line-height:1.45;">Smartphone demand softness threatens NovaPhone X1 revenue</div>
+          <div style="font-size:.72rem;padding:.35rem .5rem;background:#f0fdf4;border-left:2px solid #4ade80;border-radius:0 4px 4px 0;color:#14532d;line-height:1.45;">AI chip demand aligns with NovaCart's AI-driven product focus</div>
+        </div>
+
+        <h3 style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.05rem;color:var(--ink);margin:1rem 0 .4rem;font-weight:400;">Recommendations</h3>
+        <ol style="padding-left:1.2rem;color:var(--muted);font-size:.75rem;line-height:1.8;">
+          <li><strong style="color:var(--ink);">Enhance cost management</strong> for memory-dependent products (SmartHub Pro)</li>
+          <li><strong style="color:var(--ink);">Diversify revenue</strong> via subscription expansion to offset smartphone decline</li>
+          <li><strong style="color:var(--ink);">Strategic marketing</strong> to sustain NovaPhone X1 market share</li>
+          <li><strong style="color:var(--ink);">Invest in AI & smart home</strong> innovations to capture emerging opportunities</li>
+          <li><strong style="color:var(--ink);">Monitor market dynamics</strong> — semiconductor and memory supply chain shifts</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Review & Send -->
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:.75rem;">
+      <div style="background:var(--surface);padding:.5rem 1rem;border-bottom:1px solid var(--border);">
+        <span style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);">Review &amp; Send</span>
+      </div>
+      <div style="padding:.75rem 1rem;">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.65rem;">
+          <input type="checkbox" id="approveCheck" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;"/>
+          <label for="approveCheck" style="font-family:'Inter',sans-serif;font-size:.75rem;color:var(--ink);cursor:pointer;">I have reviewed this email and approve it for sending</label>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+          <input type="email" id="recipientEmail" placeholder="recipient@email.com" style="flex:1;min-width:200px;padding:.45rem .65rem;border:1px solid var(--border);border-radius:6px;font-family:'Inter',sans-serif;font-size:.75rem;outline:none;background:#fff;" />
+          <button id="emailSendBtn" onclick="sendEmail()" disabled style="font-family:'Inter',sans-serif;font-size:.65rem;font-weight:600;background:#2d6a4f;color:#fff;border:none;padding:.45rem 1rem;border-radius:6px;cursor:not-allowed;white-space:nowrap;opacity:.4;">Send via Gmail (with report)</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- #tab-email -->
+
 </div><!-- #app -->
 
 <script>
@@ -1000,6 +1387,28 @@ let apiKey = '';
 let currentAgent = 'greeter';
 let history = [];
 let isListening = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const cb = document.getElementById('approveCheck');
+  const btn = document.getElementById('emailSendBtn');
+  if (cb && btn) {
+    cb.addEventListener('change', () => {
+      btn.disabled = !cb.checked;
+      btn.style.opacity = cb.checked ? '1' : '.4';
+      btn.style.cursor = cb.checked ? 'pointer' : 'not-allowed';
+    });
+  }
+});
+
+function sendEmail() {
+  const to = document.getElementById('recipientEmail').value.trim();
+  if (!to) { alert('Please enter a recipient email.'); return; }
+  const subj = encodeURIComponent(document.getElementById('email-subject').textContent);
+  const emailText = document.getElementById('email-content').innerText;
+  const reportText = document.getElementById('reportBody').innerText;
+  const fullBody = encodeURIComponent(emailText + '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nATTACHED: Monthly Financial Standing Report — June 2026\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' + reportText);
+  window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(to)}&su=${subj}&body=${fullBody}`, '_blank');
+}
 let recognition = null;
 const ROUTE_RE = /ROUTE:\s*(finance|market|executive|end)/i;
 
@@ -1013,10 +1422,46 @@ function toggleSidebar() {
 // ── Tab switching ─────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', (i === 0 && name === 'overview') || (i === 1 && name === 'chat'));
+    t.classList.toggle('active', (i === 0 && name === 'overview') || (i === 1 && name === 'chat') || (i === 2 && name === 'email'));
   });
   document.getElementById('tab-overview').classList.toggle('active', name === 'overview');
   document.getElementById('tab-chat').classList.toggle('active', name === 'chat');
+  document.getElementById('tab-email').classList.toggle('active', name === 'email');
+}
+
+async function regenerateEmail() {
+  if (!apiKey) { alert('Enter your API key first.'); return; }
+  const subj = document.getElementById('email-subject');
+  const body = document.getElementById('email-content');
+  subj.textContent = 'Generating...';
+  body.innerHTML = '<div class="thinking"><b></b><b></b><b></b></div>';
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 800,
+        system: 'You are a product finance reporting agent. Given a monthly financial standing report, draft a concise stakeholder email. Output ONLY the email — start with "Subject: ..." on the first line, then a blank line, then the email body. Keep it to 3 bullet takeaways max. Professional tone.',
+        messages: [{ role: 'user', content: 'Draft a stakeholder email from this report:\n\n' + KB_REPORT }],
+      }),
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || 'Error generating email.';
+    const lines = text.split('\n');
+    const subjLine = lines[0].replace(/^Subject:\s*/i, '');
+    const emailBody = lines.slice(1).join('\n').trim();
+    subj.textContent = subjLine;
+    body.innerHTML = esc(emailBody).replace(/\n/g, '<br>');
+  } catch (e) {
+    subj.textContent = 'Error';
+    body.innerHTML = esc(e.message);
+  }
 }
 
 // ── Boot ──────────────────────────────────────────────────────────
