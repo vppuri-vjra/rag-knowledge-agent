@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NovaCart — RAG Knowledge Agent · vjra.us</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --accent: #b85042;
+    --ink: #1a1a2e;
+    --muted: #767676;
+    --bg: #f8f4ee;
+    --surface: #f4f3f0;
+    --border: #e8e6e1;
+    --green: #2d6a4f;
+    --amber: #b45309;
+    --purple: #6d28d9;
+    --blue: #1d4ed8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: #2b2b2b;
+    line-height: 1.6;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  #tab-chat .info-section-head {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.1rem;
+    letter-spacing: .02em;
+  }
+
+  /* ── Header ── */
+  header {
+    border-bottom: 4px solid var(--accent);
+    padding: 1.25rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+  .kicker {
+    text-transform: uppercase; letter-spacing: .12em; font-size: .7rem;
+    font-weight: 700; color: var(--accent); margin-bottom: .2rem;
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.7rem; color: var(--ink); font-weight: 400;
+    letter-spacing: .01em;
+  }
+  .agent-pill {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: .75rem;
+    background: var(--surface);
+    transition: border-color .3s;
+  }
+  .agent-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+    transition: background .3s;
+    flex-shrink: 0;
+  }
+  .agent-label { color: var(--muted); }
+  .agent-label strong { color: var(--ink); }
+
+  /* ── API key gate ── */
+  #gate {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 2rem;
+  }
+  .gate-card {
+    max-width: 480px; width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem 2.5rem;
+    background: var(--bg);
+  }
+  .gate-card h2 {
+    font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 500;
+    color: var(--ink); margin-bottom: .5rem;
+  }
+  .gate-card p { font-size: .9rem; color: var(--muted); margin-bottom: 1.5rem; }
+  .gate-card input {
+    width: 100%; padding: .65rem .9rem;
+    border: 1px solid var(--border); border-radius: 6px;
+    font-size: .9rem; font-family: monospace;
+    background: var(--surface); color: var(--ink);
+    margin-bottom: .75rem;
+    outline: none;
+  }
+  .gate-card input:focus { border-color: var(--accent); }
+  .gate-card button {
+    width: 100%; padding: .7rem;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 6px;
+    font-size: .9rem; font-weight: 600;
+    cursor: pointer; transition: background .15s;
+  }
+  .gate-card button:hover { background: #a04038; }
+  .gate-note {
+    font-size: .75rem; color: var(--muted);
+    margin-top: .75rem; text-align: center;
+  }
+
+  /* ── Main layout ── */
+  #app { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+
+  /* ── Tab bar ── */
+  .tab-bar {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .tab {
+    padding: .7rem 1.5rem;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--muted);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+    letter-spacing: .01em;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── Tab panels ── */
+  .tab-panel {
+    flex: 1;
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+  }
+  .tab-panel.active { display: flex; }
+
+  #tab-overview {
+    overflow-y: auto;
+    padding: 1.5rem 2rem;
+    display: none;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  #tab-overview.active { display: flex; }
+
+  .body-row {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .chat-col {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+  }
+
+  #chat {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  #chat::-webkit-scrollbar { width: 4px; }
+  #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    padding: 1.25rem 1.25rem 2rem;
+    background: var(--bg);
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .sidebar-section { margin-bottom: 1.75rem; }
+  .sidebar-kicker {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: .65rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .12em;
+    color: var(--accent);
+    margin-bottom: .7rem;
+    padding-bottom: .4rem;
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .routing-diagram { font-family: 'Inter', system-ui, sans-serif; font-size: .75rem; }
+  .route-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: .55rem; }
+  .route-from { display: flex; align-items: center; gap: 5px; font-weight: 700; color: var(--ink); white-space: nowrap; min-width: 68px; }
+  .route-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .route-arrow { color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+  .route-targets { color: var(--muted); line-height: 1.45; }
+  .route-targets b { color: var(--ink); font-weight: 600; }
+
+  .agent-table { width: 100%; border-collapse: collapse; }
+  .agent-table tr { border-bottom: 1px solid var(--border); }
+  .agent-table tr:last-child { border-bottom: none; }
+  .agent-table td {
+    padding: .45rem .3rem; font-size: .8rem; vertical-align: top; line-height: 1.45;
+  }
+  .agent-table td:first-child {
+    font-family: 'Cormorant Garamond', serif; font-weight: 700; color: var(--ink); width: 40%; padding-right: .5rem;
+  }
+  .agent-table td:last-child { color: var(--muted); font-family: 'Inter', system-ui, sans-serif; font-size: .75rem; }
+  .agent-table .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; flex-shrink: 0; }
+
+  .q-group { margin-bottom: 1rem; }
+  .q-group-label { font-family: 'Inter', system-ui, sans-serif; font-size: .63rem; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin-bottom: .4rem; }
+  .q-item {
+    display: block; font-size: .82rem; font-family: 'Cormorant Garamond', serif; font-style: italic;
+    color: var(--ink); padding: .28rem .45rem; border-radius: 4px; cursor: pointer; line-height: 1.45;
+    transition: background .12s, color .12s; margin-bottom: 1px;
+  }
+  .q-item:hover { background: var(--surface); color: var(--accent); font-style: normal; }
+
+  .card-grid-2 { padding: .75rem 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: .75rem 1.5rem; }
+  .card-grid-3 { padding: .75rem 1rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+
+  /* ── Agent orbit diagram ── */
+  .agent-orbit-wrap { padding: .9rem 1.5rem .75rem; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .orbit-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; justify-content: center; }
+  .orbit-node { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .orbit-ball {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem; font-weight: 700;
+    box-shadow: inset -2px -2px 5px rgba(0,0,0,.35), inset 1px 1px 4px rgba(255,255,255,.3), 0 3px 10px rgba(0,0,0,.2);
+    text-shadow: 0 1px 2px rgba(0,0,0,.4);
+    transition: transform .15s, filter .15s;
+  }
+  #ob-g { animation: ballGlow 5s ease-in-out infinite; animation-delay: 0s; }
+  #ob-f { animation: ballGlow 5s ease-in-out infinite; animation-delay: 1s; }
+  #ob-m { animation: ballGlow 5s ease-in-out infinite; animation-delay: 2s; }
+  #ob-e { animation: ballGlow 5s ease-in-out infinite; animation-delay: 3s; }
+  @keyframes ballGlow {
+    0%,8%,100% { transform: scale(1); filter: brightness(1); }
+    4%          { transform: scale(1.18); filter: brightness(1.4); }
+  }
+
+  .orbit-arrow-wrap { position: relative; display: flex; align-items: center; margin-top: -14px; }
+  .orbit-arrow { font-size: 1.1rem; color: var(--border); margin-top: -12px; }
+  .orbit-arrow-wrap::after {
+    content: ''; position: absolute; top: 50%; left: 0;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 6px 2px rgba(184,80,66,.6);
+    transform: translateY(-50%) translateX(-4px); opacity: 0;
+  }
+  .orbit-arrow-wrap:nth-child(2)::after  { animation: packetMove 5s linear infinite; animation-delay: 0.5s; }
+  .orbit-arrow-wrap:nth-child(4)::after  { animation: packetMove 5s linear infinite; animation-delay: 1.5s; }
+  .orbit-arrow-wrap:nth-child(6)::after  { animation: packetMove 5s linear infinite; animation-delay: 2.5s; }
+  .orbit-arrow-wrap:nth-child(8)::after  { animation: packetMove 5s linear infinite; animation-delay: 3.5s; }
+  .orbit-arrow-wrap:nth-child(10)::after { animation: packetMove 5s linear infinite; animation-delay: 4.3s; }
+  @keyframes packetMove {
+    0%    { opacity: 0; left: 0; }
+    5%    { opacity: 1; }
+    45%   { opacity: 1; }
+    50%   { opacity: 0; left: calc(100% - 4px); }
+    100%  { opacity: 0; left: calc(100% - 4px); }
+  }
+
+  .orbit-person { font-size: 1.7rem; line-height: 1; }
+  .orbit-wave { font-size: 1.5rem; color: var(--accent); opacity: .4; letter-spacing: -2px; animation: waveBreath 3s ease-in-out infinite; }
+  @keyframes waveBreath { 0%,100% { opacity: .35; } 50% { opacity: .8; } }
+  .orbit-label { font-size: .6rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+  .orbit-caption { text-align: center; font-size: .72rem; font-family: 'Cormorant Garamond', serif; font-style: italic; color: var(--muted); margin-top: .6rem; }
+
+  /* ── Greeter info sections ── */
+  .greeter-info { display: flex; flex-direction: column; gap: 0; overflow-y: auto; flex-shrink: 0; border-top: 2px solid var(--border); margin-top: .5rem; }
+  .greeter-info::-webkit-scrollbar { width: 3px; }
+  .greeter-info::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .info-section { border-bottom: 1px solid var(--border); }
+  .info-section:last-child { border-bottom: none; }
+  .info-section-head {
+    background: var(--surface); padding: .45rem 1.5rem; border-bottom: 1px solid var(--border);
+    font-size: .63rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--accent);
+  }
+  .info-section-body { padding: .65rem 1.5rem .8rem; }
+
+  .msg { display: flex; gap: 10px; animation: fadeUp .2s ease; }
+  .msg.user { flex-direction: row-reverse; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex-shrink: 0;
+    background: var(--surface); border: 1px solid var(--border); margin-top: 2px;
+  }
+  .msg.user .avatar { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .bubble {
+    max-width: 72%; background: #fff; border: 1px solid var(--border);
+    border-radius: 10px; padding: .75rem 1rem; font-size: .88rem; line-height: 1.65;
+  }
+  .msg.user .bubble { background: var(--surface); }
+
+  .agent-tag { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: .3rem; opacity: .75; }
+  .agent-tag.greeter { color: var(--muted); }
+  .msg.bot.greeter-msg .bubble {
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 1.05rem; font-weight: 400; line-height: 1.75; letter-spacing: .01em;
+  }
+  .agent-tag.finance { color: var(--green); }
+  .agent-tag.market  { color: var(--amber); }
+  .agent-tag.executive { color: var(--purple); }
+
+  .thinking { display: flex; gap: 5px; padding: 4px 0; }
+  .thinking b { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); display: block; animation: blink 1.2s infinite; }
+  .thinking b:nth-child(2) { animation-delay: .2s; }
+  .thinking b:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,80%,100%{opacity:.25} 40%{opacity:1} }
+
+  footer {
+    border-top: 1px solid var(--border); padding: .85rem 1.5rem 1rem;
+    background: var(--bg); flex-shrink: 0;
+  }
+  .footer-inner { max-width: 100%; margin: 0; }
+  .input-row {
+    display: flex; gap: 8px; border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 6px 6px 12px; background: #fff; transition: border-color .2s;
+  }
+  .input-row:focus-within { border-color: var(--accent); }
+  #msg {
+    flex: 1; border: none; outline: none; font-size: .9rem; resize: none;
+    background: transparent; color: var(--ink); line-height: 1.5; max-height: 90px; overflow-y: auto;
+  }
+  #msg::placeholder { color: #bbb; }
+  .btn {
+    border: none; cursor: pointer; border-radius: 6px; width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; background: transparent; color: var(--muted); transition: all .15s; flex-shrink: 0;
+  }
+  .btn:hover { background: var(--surface); color: var(--ink); }
+  .btn.recording { color: var(--accent); background: #fce8e6; }
+  #sendBtn { background: var(--accent); color: #fff; }
+  #sendBtn:hover { background: #a04038; color: #fff; }
+  #sendBtn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .footer-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: .6rem; font-size: .72rem; color: #bbb;
+  }
+  #voiceStatus { min-height: 14px; }
+  #resetBtn { background: none; border: none; cursor: pointer; color: #bbb; font-size: .72rem; padding: 2px 6px; border-radius: 4px; }
+  #resetBtn:hover { color: var(--muted); background: var(--surface); }
+
+  #sidebarToggle {
+    display: none; background: none; border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px; font-size: .75rem; color: var(--muted);
+    cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+  #sidebarToggle:hover { color: var(--ink); border-color: var(--ink); }
+
+  @media (max-width: 768px) {
+    header { padding: .9rem 1rem; }
+    h1 { font-size: 1.1rem; }
+    .agent-pill { display: none; }
+    body, #app { overflow-x: hidden; }
+    #chat { padding: 1rem; }
+    #tab-overview { padding: 1rem; }
+    .sidebar { padding: 1rem; }
+    footer { padding: .7rem 1rem .85rem; }
+    .bubble { max-width: 92%; font-size: .85rem; }
+    .tab { padding: .6rem .9rem; font-size: .75rem; }
+    .card-grid-2 { grid-template-columns: 1fr; }
+    .card-grid-3 { grid-template-columns: 1fr 1fr; }
+    .body-row { flex-direction: column; }
+    .chat-col { border-right: none; }
+    .sidebar { display: none; width: 100%; border-top: 1px solid var(--border); }
+    .sidebar.open { display: block; }
+    #sidebarToggle { display: inline-block; }
+  }
+  @media (max-width: 480px) {
+    .card-grid-2, .card-grid-3 { grid-template-columns: 1fr; }
+    h1 { font-size: 1rem; }
+    .tab { padding: .55rem .7rem; font-size: .72rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="kicker">VJRA.US / RAG</div>
+    <h1>NovaCart — RAG Knowledge Agent</h1>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <a href="/" style="font-size:.75rem;color:var(--muted);text-decoration:none;">← Research Library</a>
+    <div class="agent-pill" id="agentPill">
+      <div class="agent-dot" id="agentDot"></div>
+      <div class="agent-label">Agent: <strong id="agentName">Greeter</strong></div>
+    </div>
+  </div>
+</header>
+
+<!-- API key gate -->
+<div id="gate">
+  <div class="gate-card">
+    <h2>Enter your API Key</h2>
+    <p>Your Anthropic API key is used directly in the browser to call Claude. It is stored only in this browser session and never sent to any server.</p>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." autocomplete="off"/>
+    <button onclick="startApp()">Launch Knowledge Agent</button>
+    <p class="gate-note">Don't have a key? Get one at <strong>console.anthropic.com</strong></p>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app">
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('overview')">Business Problem &amp; Solution</button>
+    <button class="tab" onclick="switchTab('chat')">Knowledge Agent</button>
+  </div>
+
+  <!-- Tab 1: Overview -->
+  <div id="tab-overview" class="tab-panel active">
+    <div style="display:flex;flex-direction:column;gap:.75rem;">
+
+      <!-- Card 01: Business Problem -->
+      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <div style="background:var(--surface);padding:.5rem 1rem;border-bottom:1px solid var(--border);">
+          <span style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);">01 · Business Problem</span>
+        </div>
+        <div class="card-grid-2">
+          <div>
+            <div style="font-family:'Inter',sans-serif;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:.35rem;">The Problem</div>
+            <div style="font-size:.78rem;color:var(--muted);line-height:1.6;">Stakeholders need monthly product finance reports. Today this means <strong style="color:var(--ink)">manually pulling data</strong> from Jira, product catalogs, annual reports, and external market research. A PM spends days gathering, cross-referencing, and synthesizing — then does it again next month.</div>
+          </div>
+          <div>
+            <div style="font-family:'Inter',sans-serif;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:.35rem;">The Solution</div>
+            <div style="font-size:.78rem;color:var(--muted);line-height:1.6;">A <strong style="color:var(--ink)">RAG-powered knowledge agent</strong> that ingests 7 sources (internal .docx, Jira epics, live web pages), chunks/embeds them into Pinecone, then auto-generates a Monthly Financial Standing Report with correlated insights and a stakeholder email draft.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 02: Solution Description -->
+      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <div style="background:var(--surface);padding:.5rem 1rem;border-bottom:1px solid var(--border);">
+          <span style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);">02 · Solution Description</span>
+        </div>
+        <div class="card-grid-2">
+          <div>
+            <div style="font-family:'Inter',sans-serif;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:.35rem;">Why Not Copy-Paste?</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="font-size:.73rem;padding:.4rem .5rem;background:#fef2f2;border-left:2px solid #f87171;border-radius:0 4px 4px 0;color:#7f1d1d;line-height:1.45;">Manual reports drift from source data — numbers go stale between edits</div>
+              <div style="font-size:.73rem;padding:.4rem .5rem;background:#fef2f2;border-left:2px solid #f87171;border-radius:0 4px 4px 0;color:#7f1d1d;line-height:1.45;">Cross-referencing internal sales with external market trends is error-prone at scale</div>
+              <div style="font-size:.73rem;padding:.4rem .5rem;background:#fef2f2;border-left:2px solid #f87171;border-radius:0 4px 4px 0;color:#7f1d1d;line-height:1.45;">No audit trail — can't trace which source drove which insight</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:'Inter',sans-serif;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:.35rem;">Why RAG Pipeline?</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="font-size:.73rem;padding:.4rem .5rem;background:#f0fdf4;border-left:2px solid #4ade80;border-radius:0 4px 4px 0;color:#14532d;line-height:1.45;">Pinecone retrieval ensures answers are grounded in actual source documents</div>
+              <div style="font-size:.73rem;padding:.4rem .5rem;background:#f0fdf4;border-left:2px solid #4ade80;border-radius:0 4px 4px 0;color:#14532d;line-height:1.45;">Namespace separation (novacart-int / novacart-ext) prevents data leakage</div>
+              <div style="font-size:.73rem;padding:.4rem .5rem;background:#f0fdf4;border-left:2px solid #4ade80;border-radius:0 4px 4px 0;color:#14532d;line-height:1.45;">Idempotent re-ingestion — edit a source, re-run, report updates automatically</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 03: Technical Architecture -->
+      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <div style="background:var(--surface);padding:.5rem 1rem;border-bottom:1px solid var(--border);">
+          <span style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);">03 · Technical Architecture</span>
+        </div>
+        <div class="card-grid-3">
+          <div style="padding:.5rem .6rem;background:var(--surface);border-radius:6px;">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:.85rem;font-weight:600;color:var(--ink);margin-bottom:2px;">Embedding</div>
+            <div style="font-size:.72rem;color:var(--muted);line-height:1.4;"><strong style="color:var(--ink)">text-embedding-3-large</strong><br>1024 dimensions<br>OpenAI</div>
+          </div>
+          <div style="padding:.5rem .6rem;background:var(--surface);border-radius:6px;">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:.85rem;font-weight:600;color:var(--ink);margin-bottom:2px;">Vector DB</div>
+            <div style="font-size:.72rem;color:var(--muted);line-height:1.4;"><strong style="color:var(--ink)">Pinecone</strong><br>Index: <code style="font-size:.65rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">novacart-claudecode</code><br>NS: <code style="font-size:.65rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">novacart-int</code> (50) / <code style="font-size:.65rem;background:#e8e6e1;padding:1px 3px;border-radius:2px;">novacart-ext</code> (481)<br>cosine similarity</div>
+          </div>
+          <div style="padding:.5rem .6rem;background:var(--surface);border-radius:6px;">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:.85rem;font-weight:600;color:var(--ink);margin-bottom:2px;">Chunking</div>
+            <div style="font-size:.72rem;color:var(--muted);line-height:1.4;">Chunk: <strong style="color:var(--ink)">1500 chars</strong><br>Overlap: <strong style="color:var(--ink)">200 chars</strong><br>Recursive text splitter</div>
+          </div>
+          <div style="padding:.5rem .6rem;background:var(--surface);border-radius:6px;">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:.85rem;font-weight:600;color:var(--ink);margin-bottom:2px;">Sources</div>
+            <div style="font-size:.72rem;color:var(--muted);line-height:1.4;"><strong style="color:var(--ink)">7 docs</strong><br>3 internal (.docx + Jira Epic KAN-196)<br>4 external (.docx + vjra.us page)</div>
+          </div>
+          <div style="padding:.5rem .6rem;background:var(--surface);border-radius:6px;">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:.85rem;font-weight:600;color:var(--ink);margin-bottom:2px;">Synthesis</div>
+            <div style="font-size:.72rem;color:var(--muted);line-height:1.4;"><strong style="color:var(--ink)">GPT-4o</strong> (temp 0.3)<br>Single chat completion<br>Structured markdown report</div>
+          </div>
+          <div style="padding:.5rem .6rem;background:var(--surface);border-radius:6px;">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:.85rem;font-weight:600;color:var(--ink);margin-bottom:2px;">Voice</div>
+            <div style="font-size:.72rem;color:var(--muted);line-height:1.4;">STT: Web Speech API<br>TTS: SpeechSynthesis<br>Daniel voice · rate 0.92</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 04: System Architecture Diagram -->
+      <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="background:var(--surface);padding:.55rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);">04 · System Architecture</span>
+          <span style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:.82rem;color:var(--muted);">RAG pipeline: ingest → retrieve → synthesize</span>
+        </div>
+
+        <div style="background:#e8e0d4;padding:1.5rem 1.25rem 1.25rem;">
+
+          <!-- STEP 1: PUBLISH -->
+          <div style="display:flex;justify-content:center;margin-bottom:.5rem;">
+            <div style="display:inline-flex;align-items:stretch;border:1px solid #ddd8d0;border-radius:32px;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+              <div style="padding:.5rem 1rem;display:flex;align-items:center;gap:.4rem;border-right:1px solid #e8e6e1;">
+                <span style="font-size:.9rem;">📄</span>
+                <div>
+                  <div style="font-family:'Inter',sans-serif;font-size:.65rem;font-weight:600;color:#1a1a2e;">Internal Docs</div>
+                  <div style="font-family:'Inter',sans-serif;font-size:.58rem;color:#767676;">.docx + Jira KAN-196</div>
+                </div>
+              </div>
+              <div style="padding:.5rem 1rem;display:flex;align-items:center;gap:.3rem;border-right:1px solid #e8e6e1;">
+                <span style="font-size:.9rem;">🌐</span>
+                <div>
+                  <div style="font-family:'Inter',sans-serif;font-size:.65rem;font-weight:600;color:#1a1a2e;">External Docs</div>
+                  <div style="font-family:'Inter',sans-serif;font-size:.58rem;color:#767676;">.docx + vjra.us page</div>
+                </div>
+              </div>
+              <div style="padding:.4rem .9rem;display:flex;align-items:center;border-left:1px solid #e8e6e1;">
+                <span style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:.72rem;color:#b85042;">1. Publish</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- connector -->
+          <div style="display:flex;justify-content:center;">
+            <div style="display:flex;gap:4rem;">
+              <div style="width:1px;height:22px;background:linear-gradient(to bottom,#ddd8d0,#2d6a4f);position:relative;"><div style="position:absolute;bottom:-4px;left:-3px;width:7px;height:7px;border-radius:50%;background:#2d6a4f;box-shadow:0 0 5px rgba(45,106,79,.4);"></div></div>
+              <div style="width:1px;height:22px;background:linear-gradient(to bottom,#ddd8d0,#b45309);position:relative;"><div style="position:absolute;bottom:-4px;left:-3px;width:7px;height:7px;border-radius:50%;background:#b45309;box-shadow:0 0 5px rgba(180,83,9,.4);"></div></div>
+            </div>
+          </div>
+
+          <!-- STEP 2: INGEST -->
+          <div style="border:1px solid rgba(45,106,79,.35);border-radius:10px;padding:.75rem 1rem;background:rgba(255,255,255,.7);margin-bottom:.5rem;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;">
+              <span style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1rem;color:#1a1a2e;">2. Ingest</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;color:#767676;">Extract → Chunk (1500/200) → Embed (text-embedding-3-large) → Upsert Pinecone</span>
+            </div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0fdf6;border:1px solid rgba(45,106,79,.3);padding:.15rem .4rem;border-radius:3px;color:#2d6a4f;">Extract text</span>
+              <span style="color:#ddd8d0;">→</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0fdf6;border:1px solid rgba(45,106,79,.3);padding:.15rem .4rem;border-radius:3px;color:#2d6a4f;">Chunk 1500/200</span>
+              <span style="color:#ddd8d0;">→</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0fdf6;border:1px solid rgba(45,106,79,.3);padding:.15rem .4rem;border-radius:3px;color:#2d6a4f;">Embed 1024-dim</span>
+              <span style="color:#ddd8d0;">→</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0fdf6;border:1px solid rgba(45,106,79,.3);padding:.15rem .4rem;border-radius:3px;color:#2d6a4f;">Upsert</span>
+            </div>
+          </div>
+
+          <!-- connector to Pinecone -->
+          <div style="display:flex;justify-content:center;"><div style="width:1px;height:18px;background:linear-gradient(to bottom,rgba(45,106,79,.4),rgba(109,40,217,.4));"></div></div>
+
+          <!-- PINECONE (central store) -->
+          <div style="border:2px solid #ddd8d0;border-radius:10px;padding:.65rem 1rem;background:#fff;margin-bottom:.3rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <span style="font-size:1.1rem;">🗄</span>
+              <div>
+                <span style="font-family:'Inter',sans-serif;font-size:.7rem;font-weight:700;color:#1a1a2e;">Pinecone</span>
+                <span style="font-family:'Inter',sans-serif;font-size:.6rem;color:#767676;margin-left:.4rem;">Vector Store</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0fdf6;border:1px solid rgba(45,106,79,.3);padding:.15rem .4rem;border-radius:3px;color:#2d6a4f;">novacart-int · 50 vec</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#fffbf0;border:1px solid rgba(180,83,9,.3);padding:.15rem .4rem;border-radius:3px;color:#b45309;">novacart-ext · 481 vec</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f0ece6;border:1px solid #ddd8d0;padding:.15rem .4rem;border-radius:3px;color:#767676;">cosine · 1024-dim</span>
+            </div>
+          </div>
+
+          <!-- connector from Pinecone -->
+          <div style="display:flex;justify-content:center;"><div style="width:1px;height:18px;background:linear-gradient(to bottom,rgba(109,40,217,.4),rgba(109,40,217,.2));"></div></div>
+
+          <!-- STEP 3: RETRIEVE -->
+          <div style="border:1px solid rgba(180,83,9,.35);border-radius:10px;padding:.75rem 1rem;background:rgba(255,255,255,.7);margin-bottom:.5rem;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem;">
+              <span style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1rem;color:#1a1a2e;">3. Retrieve</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;color:#767676;">11 queries → embed → query novacart-int + novacart-ext (top_k=5)</span>
+            </div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#fffbf0;border:1px solid rgba(180,83,9,.3);padding:.15rem .4rem;border-radius:3px;color:#b45309;">11 structured queries</span>
+              <span style="color:#ddd8d0;">→</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#fffbf0;border:1px solid rgba(180,83,9,.3);padding:.15rem .4rem;border-radius:3px;color:#b45309;">embed each</span>
+              <span style="color:#ddd8d0;">→</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#fffbf0;border:1px solid rgba(180,83,9,.3);padding:.15rem .4rem;border-radius:3px;color:#b45309;">top_k=5 per NS</span>
+            </div>
+          </div>
+
+          <!-- connector -->
+          <div style="display:flex;justify-content:center;"><div style="width:1px;height:18px;background:linear-gradient(to bottom,rgba(180,83,9,.4),rgba(109,40,217,.4));"></div></div>
+
+          <!-- STEP 4: SYNTHESIZE -->
+          <div style="border:1px solid rgba(109,40,217,.35);border-radius:10px;padding:.75rem 1rem;background:rgba(255,255,255,.7);margin-bottom:.5rem;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem;">
+              <span style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1rem;color:#1a1a2e;">4. Synthesize</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;color:#767676;">GPT-4o → Monthly Financial Standing Report</span>
+            </div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f8f5ff;border:1px solid rgba(109,40,217,.3);padding:.15rem .4rem;border-radius:3px;color:#6d28d9;">Retrieved chunks</span>
+              <span style="color:#ddd8d0;">→</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f8f5ff;border:1px solid rgba(109,40,217,.3);padding:.15rem .4rem;border-radius:3px;color:#6d28d9;">GPT-4o (temp 0.3)</span>
+              <span style="color:#ddd8d0;">→</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#f8f5ff;border:1px solid rgba(109,40,217,.3);padding:.15rem .4rem;border-radius:3px;color:#6d28d9;">Markdown report</span>
+            </div>
+          </div>
+
+          <!-- connector -->
+          <div style="display:flex;justify-content:center;"><div style="width:1px;height:18px;background:linear-gradient(to bottom,rgba(109,40,217,.4),rgba(184,80,66,.4));"></div></div>
+
+          <!-- STEP 5: DRAFT EMAIL -->
+          <div style="border:1px solid rgba(184,80,66,.35);border-radius:10px;padding:.75rem 1rem;background:rgba(255,255,255,.7);box-shadow:0 1px 4px rgba(0,0,0,.05);">
+            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem;">
+              <span style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1rem;color:#1a1a2e;">5. Draft Email</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;color:#767676;">GPT-4o → Stakeholder email</span>
+            </div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#fef2f2;border:1px solid rgba(184,80,66,.3);padding:.15rem .4rem;border-radius:3px;color:#b85042;">Report summary</span>
+              <span style="color:#ddd8d0;">→</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#fef2f2;border:1px solid rgba(184,80,66,.3);padding:.15rem .4rem;border-radius:3px;color:#b85042;">GPT-4o</span>
+              <span style="color:#ddd8d0;">→</span>
+              <span style="font-family:'Inter',sans-serif;font-size:.58rem;background:#fef2f2;border:1px solid rgba(184,80,66,.3);padding:.15rem .4rem;border-radius:3px;color:#b85042;">Stakeholder email</span>
+            </div>
+          </div>
+
+          <!-- Infrastructure -->
+          <div style="border-top:1px solid #e8e6e1;padding-top:.65rem;margin-top:.75rem;">
+            <div style="font-family:'Inter',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.12em;color:#a8a29e;text-transform:uppercase;text-align:center;margin-bottom:.5rem;">Infrastructure</div>
+            <div class="card-grid-2" style="gap:.4rem;">
+              <div style="display:flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e8e6e1;border-radius:7px;padding:.45rem .6rem;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+                <span style="font-size:.9rem;">🤖</span>
+                <div><div style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:600;color:#1a1a2e;">Anthropic Claude API</div><div style="font-family:'Inter',sans-serif;font-size:.55rem;color:#767676;">claude-sonnet-4-6 · browser chat agent</div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e8e6e1;border-radius:7px;padding:.45rem .6rem;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+                <span style="font-size:.9rem;">🗄</span>
+                <div><div style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:600;color:#1a1a2e;">Pinecone</div><div style="font-family:'Inter',sans-serif;font-size:.55rem;color:#767676;">novacart-claudecode · 531 vectors · cosine</div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e8e6e1;border-radius:7px;padding:.45rem .6rem;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+                <span style="font-size:.9rem;">🎙</span>
+                <div><div style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:600;color:#1a1a2e;">Web Speech API</div><div style="font-family:'Inter',sans-serif;font-size:.55rem;color:#767676;">STT input · SpeechSynthesis TTS · Daniel voice</div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e8e6e1;border-radius:7px;padding:.45rem .6rem;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+                <span style="font-size:.9rem;">📄</span>
+                <div><div style="font-family:'Inter',sans-serif;font-size:.62rem;font-weight:600;color:#1a1a2e;">GitHub Pages</div><div style="font-family:'Inter',sans-serif;font-size:.55rem;color:#767676;">Static hosting · no backend · CDN cache</div></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div><!-- #tab-overview -->
+
+  <!-- Tab 2: Knowledge Agent (chat + sidebar) -->
+  <div id="tab-chat" class="tab-panel">
+  <div class="body-row">
+
+    <div class="chat-col">
+      <div id="chat">
+
+      <div class="greeter-info" id="greeter-info">
+        <!-- Agent orbit diagram -->
+        <div class="agent-orbit-wrap">
+          <div class="orbit-row">
+            <div class="orbit-node">
+              <div class="orbit-person">🧑</div>
+              <div class="orbit-label">You</div>
+            </div>
+            <span class="orbit-arrow-wrap"><span class="orbit-arrow">›</span></span>
+            <div class="orbit-node">
+              <div class="orbit-ball" id="ob-g" style="background:radial-gradient(circle at 35% 35%,#b0b0b0,#606060,#2a2a2a)">G</div>
+              <div class="orbit-label">Greeter</div>
+            </div>
+            <span class="orbit-arrow-wrap"><span class="orbit-arrow">›</span></span>
+            <div class="orbit-node">
+              <div class="orbit-ball" id="ob-f" style="background:radial-gradient(circle at 35% 35%,#6ecfa0,#2d6a4f,#0f3320)">F</div>
+              <div class="orbit-label">Finance<br>Analyst</div>
+            </div>
+            <span class="orbit-arrow-wrap"><span class="orbit-arrow">›</span></span>
+            <div class="orbit-node">
+              <div class="orbit-ball" id="ob-m" style="background:radial-gradient(circle at 35% 35%,#f0c060,#b45309,#6b2e00)">M</div>
+              <div class="orbit-label">Market<br>Intelligence</div>
+            </div>
+            <span class="orbit-arrow-wrap"><span class="orbit-arrow">›</span></span>
+            <div class="orbit-node">
+              <div class="orbit-ball" id="ob-e" style="background:radial-gradient(circle at 35% 35%,#b48df0,#6d28d9,#320a7a)">E</div>
+              <div class="orbit-label">Executive</div>
+            </div>
+            <span class="orbit-arrow-wrap"><span class="orbit-arrow">›</span></span>
+            <div class="orbit-node">
+              <div class="orbit-wave">～</div>
+              <div class="orbit-label">Response</div>
+            </div>
+          </div>
+          <div class="orbit-caption">Ask anything — the right specialist responds automatically</div>
+        </div>
+
+        <div class="info-section">
+          <div class="info-section-head">How Agents Transfer</div>
+          <div class="info-section-body">
+            <div class="routing-diagram">
+              <div class="route-row"><div class="route-from"><span class="route-dot" style="background:#767676"></span>Greeter</div><span class="route-arrow">→</span><div class="route-targets">Routes to <b>Finance</b>, <b>Market</b>, or <b>Executive</b> based on your question</div></div>
+              <div class="route-row"><div class="route-from"><span class="route-dot" style="background:#2d6a4f"></span>Finance</div><span class="route-arrow">→</span><div class="route-targets">Transfers to <b>Market</b> for industry trends. Transfers to <b>Executive</b> for synthesis.</div></div>
+              <div class="route-row"><div class="route-from"><span class="route-dot" style="background:#b45309"></span>Market</div><span class="route-arrow">→</span><div class="route-targets">Transfers to <b>Finance</b> for product data. Transfers to <b>Executive</b> for recommendations.</div></div>
+              <div class="route-row"><div class="route-from"><span class="route-dot" style="background:#6d28d9"></span>Executive</div><span class="route-arrow">→</span><div class="route-targets">Transfers to <b>Finance</b> or <b>Market</b> if you drill into specifics.</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="info-section">
+          <div class="info-section-head">Agents &amp; Roles</div>
+          <div class="info-section-body">
+            <table class="agent-table">
+              <tr><td><span class="dot" style="background:#767676"></span>Greeter</td><td>Welcomes you, detects intent, routes to the right specialist</td></tr>
+              <tr><td><span class="dot" style="background:#2d6a4f"></span>Finance Analyst</td><td>Internal NovaCart data — revenue, margins, SKU performance, subscriptions</td></tr>
+              <tr><td><span class="dot" style="background:#b45309"></span>Market Intelligence</td><td>External market data — semiconductors, AI chips, memory prices, trends</td></tr>
+              <tr><td><span class="dot" style="background:#6d28d9"></span>Executive</td><td>Synthesized insights, correlated risks, recommendations — full KB access</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <footer>
+        <div class="footer-inner">
+          <div class="input-row">
+            <textarea id="msg" rows="1" placeholder="Ask about NovaCart..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+            <button class="btn" id="voiceBtn" title="Voice input" onclick="toggleVoice()">🎤</button>
+            <button class="btn" id="sendBtn" onclick="send()">➤</button>
+          </div>
+          <div class="footer-meta">
+            <div id="voiceStatus"></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button id="sidebarToggle" onclick="toggleSidebar()">☰ Sidebar</button>
+              <button id="resetBtn" onclick="resetChat()">↺ Reset</button>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Right Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-kicker">Questions to Ask</div>
+
+        <div class="q-group">
+          <div class="q-group-label">🟢 Finance Analyst</div>
+          <span class="q-item" onclick="useQ(this)">What is NovaCart's total revenue?</span>
+          <span class="q-item" onclick="useQ(this)">Tell me about the NovaPhone X1.</span>
+          <span class="q-item" onclick="useQ(this)">What is the subscription churn rate?</span>
+          <span class="q-item" onclick="useQ(this)">How is the NovaFit Active Watch performing?</span>
+          <span class="q-item" onclick="useQ(this)">What is the SmartHub Pro revenue?</span>
+          <span class="q-item" onclick="useQ(this)">Break down revenue by product segment.</span>
+        </div>
+
+        <div class="q-group">
+          <div class="q-group-label">🟡 Market Intelligence</div>
+          <span class="q-item" onclick="useQ(this)">What is the global semiconductor outlook?</span>
+          <span class="q-item" onclick="useQ(this)">How are memory prices trending?</span>
+          <span class="q-item" onclick="useQ(this)">What is the AI chip demand forecast?</span>
+          <span class="q-item" onclick="useQ(this)">How will rising memory prices affect consumer electronics?</span>
+          <span class="q-item" onclick="useQ(this)">What do Deloitte and McKinsey project?</span>
+        </div>
+
+        <div class="q-group">
+          <div class="q-group-label">🟣 Executive</div>
+          <span class="q-item" onclick="useQ(this)">Give me the executive summary.</span>
+          <span class="q-item" onclick="useQ(this)">What are NovaCart's top risks?</span>
+          <span class="q-item" onclick="useQ(this)">What are your recommendations?</span>
+          <span class="q-item" onclick="useQ(this)">How do memory prices impact NovaCart specifically?</span>
+        </div>
+
+        <div class="q-group">
+          <div class="q-group-label">💬 Other</div>
+          <span class="q-item" onclick="useQ(this)">Who are you?</span>
+          <span class="q-item" onclick="useQ(this)">Thanks, goodbye.</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+  </div><!-- #tab-chat -->
+</div><!-- #app -->
+
+<script>
+// ── Knowledge Bases ──────────────────────────────────────────────
+const KB_INTERNAL = `# NovaCart — Internal Performance Data (June 2026)
+
+## Company Overview
+NovaCart is a consumer electronics company with a diversified product portfolio spanning smartphones, smart home devices, wearables, and subscription services. FY2024 total revenue: ~$2.4 billion.
+
+## Product Portfolio
+
+### NovaPhone X1 (Flagship Smartphone)
+- Revenue: $1.62 billion in FY2024, gross margin 38%
+- Units Sold: ~1.9 million devices
+- Trend: Historically strong, but cautious outlook due to anticipated smartphone demand decline in 2026
+- Key risk: Rising memory prices could pressure margins
+
+### NovaHome SmartHub Pro (Smart Home Hub)
+- Aggregate Revenue: $320.3 million over 3 years
+- Average weekly units: 9,618
+- Trend: Stable, but margin pressure from rising memory prices
+- Opportunity: Growing smart home market
+
+### NovaFit Active Watch (Wearable)
+- Aggregate Revenue: $444.5 million over 3 years
+- Average weekly units: 9,581
+- Trend: Consistent sales supported by health & fitness market growth
+
+### NovaCart Essentials Subscription
+- Aggregate Revenue: $19.2 million over 3 years
+- Average weekly units: 9,731
+- Churn rate: 4.1% (strong retention)
+- Trend: Strong recurring revenue stream
+
+## SKU Performance (3-Year Weekly Data)
+- Data source: Jira Epic KAN-196 (624 weekly data points across 4 SKUs)
+- Metrics tracked: units sold, conversion rate, revenue per week
+- Time span: 156 weeks × 4 SKUs
+
+## FY2024 Financial Highlights
+- Total revenue: ~$2.4 billion
+- Smartphone segment dominates (~67% of revenue)
+- Subscription services growing fastest (lowest churn)
+- Smart home and wearable segments provide diversification`;
+
+const KB_EXTERNAL = `# External Market Intelligence — Semiconductor & Tech Trends
+
+## Global Semiconductor Market (2026)
+Source: Deloitte Insights, McKinsey, Industry Reports
+
+- Global semiconductor industry projected to reach US$975 billion in 2026 (historic peak)
+- Growth: 22% in 2025, projected 26% in 2026
+- Annual sales of US$2 trillion projected by 2036
+- AI chips drive ~50% of total revenue but represent <0.2% of unit volume
+- Top 10 chip companies: combined market cap US$9.5 trillion (up 46% YoY)
+- Top 3 chip stocks account for 80% of total chip market cap
+
+## AI Chip Demand
+- Generative AI chips approaching US$500 billion revenue in 2026
+- AMD CEO estimates AI accelerator TAM at US$1 trillion by 2030
+- AI data centers need 92 GW additional power by 2027
+- Risk: ROI uncertainty, power constraints, efficiency breakthroughs could reduce demand
+
+## Memory Market
+- Memory revenues ~US$200 billion in 2026 (25% of total semiconductor)
+- Memory prices surged ~4x between Sep-Nov 2025
+- Consumer memory (DDR4, DDR5) facing shortages due to HBM3/HBM4/DDR7 prioritization
+- Further 50% price increases expected in Q1-Q2 2026
+- Consumer memory tightness could last a decade
+
+## Impact on Consumer Electronics
+- PC and smartphone sales expected to decline in 2026 due to rising memory prices
+- Non-AI chip markets (automotive, smartphones, PCs) seeing slower growth
+- Manufacturers prioritizing AI hardware over consumer components
+
+## Key Technology Trends (McKinsey/Deloitte)
+- AI infrastructure investment accelerating
+- Integrated system architecture emerging as priority
+- Risk mitigation for demand correction becoming critical
+- Balanced investment approach recommended over AI-only bets`;
+
+const KB_REPORT = `# NovaCart Monthly Financial Standing Report — June 2026
+
+## Executive Summary
+In June 2026, NovaCart remains a strong player in the consumer electronics market, benefiting from its diversified product portfolio. Despite challenges in the broader market, such as rising memory prices and a potential slowdown in smartphone demand, NovaCart's strategic focus on subscription services and smart home devices has positioned it well for sustained growth.
+
+## Internal Performance Snapshot
+- NovaPhone X1: $1.62B revenue (FY2024), 38% gross margin, ~1.9M units. Cautious outlook due to smartphone demand decline.
+- NovaHome SmartHub Pro: $320.3M aggregate (3Y), 9,618 units/week. Stable but memory price pressure.
+- NovaFit Active Watch: $444.5M aggregate (3Y), 9,581 units/week. Consistent, health market tailwind.
+- NovaCart Essentials: $19.2M aggregate (3Y), 9,731 units/week, 4.1% churn. Strong recurring revenue.
+
+## External Market Context
+- Semiconductor market: $975B projected (2026), driven by AI infrastructure
+- Memory prices surged 4x, further 50% increases expected Q1-Q2 2026
+- Smartphone and PC sales expected to decline due to memory costs
+- AI chip demand strong but concentrated risk
+
+## Correlated Insights & Risks
+- Memory price spikes could squeeze NovaHome SmartHub Pro margins
+- Smartphone demand softness threatens NovaPhone X1 revenue
+- AI chip demand aligns with NovaCart's AI-driven product focus
+
+## Recommendations
+1. Enhance cost management for memory-dependent products
+2. Diversify revenue via subscription expansion
+3. Strategic marketing to sustain NovaPhone X1 sales
+4. Invest in AI and smart home innovations
+5. Monitor semiconductor and memory market dynamics`;
+
+// ── Agent config ─────────────────────────────────────────────────
+const AGENT_LABELS = {
+  greeter:   'Greeter',
+  finance:   'Finance Analyst',
+  market:    'Market Intelligence',
+  executive: 'Executive',
+};
+
+const AGENT_COLORS = {
+  greeter:   '#767676',
+  finance:   '#2d6a4f',
+  market:    '#b45309',
+  executive: '#6d28d9',
+};
+
+const KB_ACCESS = {
+  greeter:   [],
+  finance:   ['internal'],
+  market:    ['external'],
+  executive: ['internal', 'external', 'report'],
+};
+
+function buildKB(agent) {
+  const access = KB_ACCESS[agent] || [];
+  let kb = '';
+  if (access.includes('internal'))  kb += KB_INTERNAL + '\n\n';
+  if (access.includes('external'))  kb += KB_EXTERNAL + '\n\n';
+  if (access.includes('report'))    kb += KB_REPORT;
+  return kb.trim();
+}
+
+const GLOBAL_RULES = `
+- Answer ONLY from the knowledge base. Never speculate or make up information.
+- Be concise. Lead with the most important fact first.
+- Use specific numbers, dates, and names from the documents.
+- If something is not in the knowledge base, say: "I don't have that in my NovaCart documents."
+- After answering, ask if they need anything else.
+- Keep a professional but approachable tone.
+`.trim();
+
+const SYSTEM_PROMPTS = {
+  greeter: `You are the Greeter for the NovaCart RAG Knowledge Agent.
+Your ONLY job: welcome the caller and identify what they need. Do NOT answer questions yourself.
+Based on their message, end your response with EXACTLY one of:
+  ROUTE: finance
+  ROUTE: market
+  ROUTE: executive
+  ROUTE: end
+
+Routing rules:
+- finance → product revenue, sales, margins, SKU performance, subscription, churn, units sold, NovaPhone, SmartHub, NovaFit, internal data
+- market → semiconductor, AI chips, memory prices, industry trends, Deloitte, McKinsey, external market, consumer electronics outlook
+- executive → executive summary, recommendations, risks, correlated insights, synthesized view, overall assessment, "how is NovaCart doing"
+- end → goodbye, done, thanks, quit
+
+${GLOBAL_RULES}`,
+
+  finance: `You are the Finance Analyst for the NovaCart RAG Knowledge Agent.
+You answer from internal NovaCart performance data ONLY. Cite specific numbers (revenue, margins, units, churn rates).
+Topics: product revenue, SKU performance, margins, units sold, subscription metrics, FY2024 highlights.
+If the user asks about semiconductor/market/industry trends → end your response with: ROUTE: market
+If the user wants a synthesized executive view/recommendations/risks → end with: ROUTE: executive
+If the user is done → end with: ROUTE: end
+${GLOBAL_RULES}`,
+
+  market: `You are the Market Intelligence Specialist for the NovaCart RAG Knowledge Agent.
+You answer from external market intelligence data ONLY. Cite sources (Deloitte, McKinsey, industry reports).
+Topics: semiconductor market, AI chip demand, memory prices, consumer electronics impact, technology trends.
+If the user asks about NovaCart product/revenue/internal data → end with: ROUTE: finance
+If the user wants synthesized insights/recommendations/executive summary → end with: ROUTE: executive
+If the user is done → end with: ROUTE: end
+${GLOBAL_RULES}`,
+
+  executive: `You are the Executive Briefing Specialist for the NovaCart RAG Knowledge Agent. You have access to ALL knowledge base documents — internal performance, external market intelligence, and the synthesized monthly report.
+Provide synthesized insights correlating internal NovaCart performance with external market context. Lead with recommendations and key risks. 3-5 sentences max unless asked for more.
+If user digs into specific product numbers → end with: ROUTE: finance
+If user asks specifically about market/semiconductor details → end with: ROUTE: market
+If user is done → end with: ROUTE: end
+${GLOBAL_RULES}`,
+};
+
+// ── State ─────────────────────────────────────────────────────────
+let apiKey = '';
+let currentAgent = 'greeter';
+let history = [];
+let isListening = false;
+let recognition = null;
+const ROUTE_RE = /ROUTE:\s*(finance|market|executive|end)/i;
+
+function toggleSidebar() {
+  const sb = document.querySelector('.sidebar');
+  sb.classList.toggle('open');
+  document.getElementById('sidebarToggle').textContent =
+    sb.classList.contains('open') ? '✕ Sidebar' : '☰ Sidebar';
+}
+
+// ── Tab switching ─────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', (i === 0 && name === 'overview') || (i === 1 && name === 'chat'));
+  });
+  document.getElementById('tab-overview').classList.toggle('active', name === 'overview');
+  document.getElementById('tab-chat').classList.toggle('active', name === 'chat');
+}
+
+// ── Boot ──────────────────────────────────────────────────────────
+function startApp() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('sk-')) {
+    alert('Please enter a valid Anthropic API key (starts with sk-)');
+    return;
+  }
+  apiKey = key;
+  sessionStorage.setItem('anthropic_key_rag', key);
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  switchTab('chat');
+  greet();
+}
+
+window.addEventListener('load', () => {
+  const saved = sessionStorage.getItem('anthropic_key_rag');
+  if (saved) {
+    document.getElementById('apiKeyInput').value = saved;
+  }
+  document.getElementById('apiKeyInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startApp();
+  });
+});
+
+function greet() {
+  const text = "Welcome to the NovaCart RAG Knowledge Agent. I can help with internal product finance data, external market intelligence, or a synthesized executive briefing. What would you like to know?";
+  const chat = document.getElementById('chat');
+  const info = document.getElementById('greeter-info');
+  const d = document.createElement('div');
+  d.className = 'msg bot greeter-msg';
+  d.innerHTML = `${agentAvatar('greeter')}<div class="bubble"><div class="agent-tag greeter">Greeter</div><div>${esc(text)}</div></div>`;
+  chat.insertBefore(d, info);
+  setAgent('greeter');
+  speak(text);
+}
+
+// ── Claude API call ───────────────────────────────────────────────
+async function callClaude(agent, userMessage) {
+  const kb = buildKB(agent);
+  const systemPrompt = kb
+    ? `${SYSTEM_PROMPTS[agent]}\n\n---\n## KNOWLEDGE BASE\n\n${kb}`
+    : SYSTEM_PROMPTS[agent];
+
+  const messages = [...history, { role: 'user', content: userMessage }];
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+// ── Chat logic ────────────────────────────────────────────────────
+async function send() {
+  const input = document.getElementById('msg');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  autoResize(input);
+
+  addUserMsg(text);
+  const thinking = addThinking();
+  document.getElementById('sendBtn').disabled = true;
+
+  try {
+    let maxHops = 3, hops = 0, response, route;
+
+    while (hops < maxHops) {
+      response = await callClaude(currentAgent, text);
+      hops++;
+      const m = ROUTE_RE.exec(response);
+      route = m ? m[1].toLowerCase() : null;
+      const clean = response.replace(ROUTE_RE, '').trim();
+
+      if (route === 'end') {
+        thinking.remove();
+        const farewell = "Thanks for exploring NovaCart's data. Reach out anytime you need another briefing!";
+        addBotMsg(farewell, currentAgent);
+        speak(farewell);
+        history.push({ role: 'user', content: text });
+        history.push({ role: 'assistant', content: farewell });
+        return;
+      }
+
+      if (route && route !== currentAgent) {
+        currentAgent = route;
+        setAgent(currentAgent);
+        continue;
+      }
+
+      thinking.remove();
+      addBotMsg(clean, currentAgent);
+      speak(clean);
+      history.push({ role: 'user', content: text });
+      history.push({ role: 'assistant', content: clean });
+      return;
+    }
+
+    thinking.remove();
+    addBotMsg("I'm having trouble routing your question — could you rephrase it?", currentAgent);
+  } catch(e) {
+    thinking.remove();
+    addBotMsg(`Error: ${e.message}`, 'greeter');
+  } finally {
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('msg').focus();
+  }
+}
+
+function resetChat() {
+  window.speechSynthesis?.cancel();
+  currentAgent = 'greeter';
+  history = [];
+  document.getElementById('chat').innerHTML = '';
+  // Re-add greeter-info
+  const info = document.createElement('div');
+  info.className = 'greeter-info';
+  info.id = 'greeter-info';
+  info.innerHTML = document.getElementById('greeter-info')?.innerHTML || '';
+  // Rebuild info sections
+  info.innerHTML = `
+    <div class="agent-orbit-wrap">
+      <div class="orbit-row">
+        <div class="orbit-node"><div class="orbit-person">🧑</div><div class="orbit-label">You</div></div>
+        <span class="orbit-arrow-wrap"><span class="orbit-arrow">›</span></span>
+        <div class="orbit-node"><div class="orbit-ball" id="ob-g" style="background:radial-gradient(circle at 35% 35%,#b0b0b0,#606060,#2a2a2a)">G</div><div class="orbit-label">Greeter</div></div>
+        <span class="orbit-arrow-wrap"><span class="orbit-arrow">›</span></span>
+        <div class="orbit-node"><div class="orbit-ball" id="ob-f" style="background:radial-gradient(circle at 35% 35%,#6ecfa0,#2d6a4f,#0f3320)">F</div><div class="orbit-label">Finance<br>Analyst</div></div>
+        <span class="orbit-arrow-wrap"><span class="orbit-arrow">›</span></span>
+        <div class="orbit-node"><div class="orbit-ball" id="ob-m" style="background:radial-gradient(circle at 35% 35%,#f0c060,#b45309,#6b2e00)">M</div><div class="orbit-label">Market<br>Intelligence</div></div>
+        <span class="orbit-arrow-wrap"><span class="orbit-arrow">›</span></span>
+        <div class="orbit-node"><div class="orbit-ball" id="ob-e" style="background:radial-gradient(circle at 35% 35%,#b48df0,#6d28d9,#320a7a)">E</div><div class="orbit-label">Executive</div></div>
+        <span class="orbit-arrow-wrap"><span class="orbit-arrow">›</span></span>
+        <div class="orbit-node"><div class="orbit-wave">～</div><div class="orbit-label">Response</div></div>
+      </div>
+      <div class="orbit-caption">Ask anything — the right specialist responds automatically</div>
+    </div>
+    <div class="info-section">
+      <div class="info-section-head">How Agents Transfer</div>
+      <div class="info-section-body">
+        <div class="routing-diagram">
+          <div class="route-row"><div class="route-from"><span class="route-dot" style="background:#767676"></span>Greeter</div><span class="route-arrow">→</span><div class="route-targets">Routes to <b>Finance</b>, <b>Market</b>, or <b>Executive</b> based on your question</div></div>
+          <div class="route-row"><div class="route-from"><span class="route-dot" style="background:#2d6a4f"></span>Finance</div><span class="route-arrow">→</span><div class="route-targets">Transfers to <b>Market</b> for industry trends. Transfers to <b>Executive</b> for synthesis.</div></div>
+          <div class="route-row"><div class="route-from"><span class="route-dot" style="background:#b45309"></span>Market</div><span class="route-arrow">→</span><div class="route-targets">Transfers to <b>Finance</b> for product data. Transfers to <b>Executive</b> for recommendations.</div></div>
+          <div class="route-row"><div class="route-from"><span class="route-dot" style="background:#6d28d9"></span>Executive</div><span class="route-arrow">→</span><div class="route-targets">Transfers to <b>Finance</b> or <b>Market</b> if you drill into specifics.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="info-section">
+      <div class="info-section-head">Agents &amp; Roles</div>
+      <div class="info-section-body">
+        <table class="agent-table">
+          <tr><td><span class="dot" style="background:#767676"></span>Greeter</td><td>Welcomes you, detects intent, routes to the right specialist</td></tr>
+          <tr><td><span class="dot" style="background:#2d6a4f"></span>Finance Analyst</td><td>Internal NovaCart data — revenue, margins, SKU performance, subscriptions</td></tr>
+          <tr><td><span class="dot" style="background:#b45309"></span>Market Intelligence</td><td>External market data — semiconductors, AI chips, memory prices, trends</td></tr>
+          <tr><td><span class="dot" style="background:#6d28d9"></span>Executive</td><td>Synthesized insights, correlated risks, recommendations — full KB access</td></tr>
+        </table>
+      </div>
+    </div>`;
+  document.getElementById('chat').appendChild(info);
+  setAgent('greeter');
+  greet();
+}
+
+// ── DOM helpers ───────────────────────────────────────────────────
+function addUserMsg(text) {
+  const chat = document.getElementById('chat');
+  const d = document.createElement('div');
+  d.className = 'msg user';
+  d.innerHTML = `<div class="avatar">👤</div><div class="bubble">${esc(text)}</div>`;
+  chat.appendChild(d);
+  scrollBottom();
+}
+
+const AGENT_BALLS = {
+  greeter:   'radial-gradient(circle at 35% 35%, #b0b0b0, #606060, #2a2a2a)',
+  finance:   'radial-gradient(circle at 35% 35%, #6ecfa0, #2d6a4f, #0f3320)',
+  market:    'radial-gradient(circle at 35% 35%, #f0c060, #b45309, #6b2e00)',
+  executive: 'radial-gradient(circle at 35% 35%, #b48df0, #6d28d9, #320a7a)',
+};
+
+function agentAvatar(agent) {
+  const grad = AGENT_BALLS[agent] || AGENT_BALLS.greeter;
+  const initial = { greeter:'G', finance:'F', market:'M', executive:'E' }[agent] || '?';
+  return `<div class="avatar" style="background:${grad};border:none;box-shadow:inset -2px -2px 5px rgba(0,0,0,.35),inset 1px 1px 4px rgba(255,255,255,.3),0 2px 6px rgba(0,0,0,.2);color:#fff;font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.4);">${initial}</div>`;
+}
+
+function addBotMsg(text, agent) {
+  const chat = document.getElementById('chat');
+  const d = document.createElement('div');
+  d.className = 'msg bot';
+  d.innerHTML = `
+    ${agentAvatar(agent)}
+    <div class="bubble">
+      <div class="agent-tag ${agent}">${AGENT_LABELS[agent] || agent}</div>
+      <div>${esc(text)}</div>
+    </div>`;
+  chat.appendChild(d);
+  setAgent(agent);
+  scrollBottom();
+}
+
+function addThinking() {
+  const chat = document.getElementById('chat');
+  const d = document.createElement('div');
+  d.className = 'msg bot';
+  d.innerHTML = `<div class="avatar">🤖</div><div class="bubble"><div class="thinking"><b></b><b></b><b></b></div></div>`;
+  chat.appendChild(d);
+  scrollBottom();
+  return d;
+}
+
+function setAgent(agent) {
+  const dot = document.getElementById('agentDot');
+  const name = document.getElementById('agentName');
+  if (dot) dot.style.background = AGENT_COLORS[agent] || '#767676';
+  if (name) name.textContent = AGENT_LABELS[agent] || agent;
+
+  // KB strip null checks
+  ['internal','external','report'].forEach(k => {
+    const el = document.getElementById('kb-'+k);
+    if (el) el.classList.toggle('on', KB_ACCESS[agent]?.includes(k));
+  });
+}
+
+function scrollBottom() {
+  const c = document.getElementById('chat');
+  c.scrollTop = c.scrollHeight;
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+// ── Voice input (Web Speech API) ─────────────────────────────────
+function toggleVoice() {
+  isListening ? stopListening() : startListening();
+}
+
+function startListening() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { setVoiceStatus('Voice not supported — try Chrome'); return; }
+  recognition = new SR();
+  recognition.lang = 'en-US';
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('voiceBtn').classList.add('recording');
+    setVoiceStatus('🎤 Listening...');
+  };
+  recognition.onresult = (e) => {
+    const t = Array.from(e.results).map(r => r[0].transcript).join('');
+    document.getElementById('msg').value = t;
+    autoResize(document.getElementById('msg'));
+    if (e.results[0].isFinal) stopListening();
+  };
+  recognition.onerror  = () => stopListening();
+  recognition.onend    = () => stopListening();
+  recognition.start();
+}
+
+function stopListening() {
+  isListening = false;
+  recognition?.stop();
+  document.getElementById('voiceBtn').classList.remove('recording');
+  setTimeout(() => setVoiceStatus(''), 2000);
+}
+
+function setVoiceStatus(msg) {
+  document.getElementById('voiceStatus').textContent = msg;
+}
+
+// ── Voice output (Web Speech Synthesis) ──────────────────────────
+const MALE_VOICE_PREFS = [
+  'Daniel', 'Google UK English Male', 'Alex', 'Tom', 'Fred',
+  'Google US English', 'Aaron', 'Arthur', 'Gordon', 'Reed',
+];
+
+let _narratorVoice = null;
+
+function getNarratorVoice() {
+  if (_narratorVoice) return _narratorVoice;
+  const voices = speechSynthesis.getVoices();
+  for (const pref of MALE_VOICE_PREFS) {
+    const v = voices.find(v => v.name.includes(pref));
+    if (v) { _narratorVoice = v; return v; }
+  }
+  return voices.find(v => v.lang === 'en-US') || null;
+}
+
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.rate  = 0.92;
+  utt.pitch = 0.88;
+  utt.volume = 1.0;
+  const v = getNarratorVoice();
+  if (v) utt.voice = v;
+  window.speechSynthesis.speak(utt);
+}
+
+speechSynthesis.onvoiceschanged = () => { _narratorVoice = null; };
+
+// ── Utilities ─────────────────────────────────────────────────────
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 90) + 'px';
+}
+
+function useQ(el) {
+  document.getElementById('msg').value = el.textContent.trim();
+  send();
+}
+</script>
+</body>
+</html>
